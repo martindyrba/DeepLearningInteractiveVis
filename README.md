@@ -27,7 +27,7 @@ To run it, there are two options.
 bokeh serve InteractiveVis --show
 ```
 
-2. Alternatively download the docker container from XXX.  
+2. Alternatively download the docker container from https://nextcloud.dzne.de/index.php/s/MPWSDzKgfJWCH5W  
 Then use the scripts ```install_docker_image_intvis.sh```, ```run_docker_intvis.sh```, and ```stop_docker_intvis.sh``` to install, run, and stop the Bokeh app, respectively.
 
 After running Bokeh, the app will be available from your web browser: [http://localhost:5006/InteractiveVis](http://localhost:5006/InteractiveVis)
