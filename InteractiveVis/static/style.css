@@ -1,0 +1,26 @@
+.subject_divs {
+  height: 29px !important; /*width set in main.py dependent on plot size of MRI image*/
+  background-color:#CCBFB3;
+  margin-top: 0px;
+  margin-right: 5px;
+  margin-bottom: 0px;
+  margin-left: 5px;
+}
+
+
+.cluster_divs {
+  width: 200px !important; /*force override of bokeh's default auto-sizing policy*/
+  height: 39px !important;
+  background-color:#429e5a;
+  margin-top: 0px;
+  margin-right: 5px;
+  margin-bottom: 0px;
+  margin-left: 5px;
+  
+}
+
+.region_divs {
+  width: 200px !important;
+  height: 39px !important;
+  background-color:#c6e2f2;
+}

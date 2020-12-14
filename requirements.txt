@@ -1,0 +1,12 @@
+innvestigate==1.0.9
+keras==2.2.4
+tensorflow==1.15.4
+bokeh==1.4.0
+numpy==1.18.5
+xlrd==2.0.1
+h5py==2.10.0
+pandas==1.1.5
+matplotlib==3.3.3
+nibabel==3.2.1
+scikit-learn==0.23.2
+scikit-image==0.17.2
