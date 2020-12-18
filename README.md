@@ -46,18 +46,27 @@ Then you can start the Bokeh application as indicated above.
 
 
 
+***
+
+
+
 ### CNN model training and performance evaluation
 
-Order of script execution:
+The code for training the CNN models and evaluation is provided in this repository.  
+The order of script execution was as follows:
+
 1. [CreateResiduals-ADNI2-StoreModels.ipynb](CreateResiduals-ADNI2-StoreModels.ipynb) and other scripts for the validation samples [CreateResiduals-ADNI3.ipynb](CreateResiduals-ADNI3.ipynb) (execution time: each 15-30 minutes)
 2. [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_dr0.1.ipynb) for model training based on twenty-fold cross-validation to evaluate general model accuracy (execution time: 2-10 hrs with CUDA-GPU?)
 3. [CalcAccuracyPerGroup_ADNI2.ipynb](CalcAccuracyPerGroup_ADNI2.ipynb) and [CalcAccuracyPerGroup_ADNI2_Amy.ipynb](CalcAccuracyPerGroup_ADNI2_Amy.ipynb) to calculate the accuracy/AUC per comparison MCI vs. CN and AD vs. CN
 4. [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationADNI3_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationADNI3_dr0.1.ipynb), [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationAIBL_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationAIBL_dr0.1.ipynb) for calculating model performance on the validation datasets (execution time: each 0.5-1 hr with CUDA-GPU?)
 5. [extract_hippocampal_activation_newmodel.ipynb](extract_hippocampal_activation_newmodel.ipynb) to extract the hippocampal activity for all CV models (execution time: 10 minutes with CUDA-GPU)
 6. [extract_relevance_maps_as_nifti.ipynb](extract_relevance_maps_as_nifti.ipynb) to extract the relevance map overlays as nifti file for all participants/scans for a single model (execution time: 30 minutes with CUDA-GPU)
+7. [CreateDemoDataset.ipynb](CreateDemoDataset.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
+
 
 
 ***
+
 
 
 ### License:
