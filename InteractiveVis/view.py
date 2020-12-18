@@ -1,4 +1,3 @@
-#view.py
 #!/usr/bin/env python
 # coding: utf-8
 firstrun = True #Set to false from main.py after first run.
@@ -10,7 +9,7 @@ from bokeh.io import output_notebook, push_notebook, show
 from bokeh.models.annotations import Span
 from bokeh.models.widgets import Slider
 from bokeh.models.glyphs import Rect
-from bokeh.models import Div, Toggle
+from bokeh.models import Div, Toggle, Label
 import numpy as np
 
 from config import scale_factor
@@ -115,6 +114,20 @@ sagittal_crosshair_from_frontal = Span(location=slice_slider_frontal.value-1, di
 sagittal_crosshair_from_axial = Span(location=slice_slider_axial.end-slice_slider_axial.value-1, dimension='width', line_color='green', line_dash='dashed', line_width=2)
 p_sagittal.add_layout(sagittal_crosshair_from_frontal)
 p_sagittal.add_layout(sagittal_crosshair_from_axial)
+print(p_axial.plot_width)
+loading_label = Label(
+                 text='Loading...', render_mode='css',
+                 x_offset=p_axial.plot_width//2,
+                 y_offset=p_axial.plot_height//2,
+                 text_align='center', text_color='white',
+                 text_font_size='25px', text_font_style='italic',
+                 border_line_color='white', border_line_alpha=1.0,
+                 background_fill_color='black', background_fill_alpha=0.5,
+                 level='overlay', visible=False)
+
+p_axial.add_layout(loading_label)
+
+
 
 toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
@@ -424,6 +437,7 @@ def plot_sagittal_region():
 def disable_widgets():
     if debug: print("Called disable_widgets().")
 
+    loading_label.update(visible=True)
     model_select.update(disabled=True)
     subject_select.update(disabled=True)
     slice_slider_frontal.update(disabled=True)
@@ -446,3 +460,4 @@ def enable_widgets():
     clustersize_slider.update(disabled=False)
     transparency_slider.update(disabled=False)
     toggle_regions.update(disabled=False)
+    loading_label.update(visible=False)

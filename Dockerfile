@@ -5,14 +5,17 @@ FROM python:3.7.6-slim
 WORKDIR /dockerDir
 
 # copy the dependencies file to the working directory
-COPY ../DeepLearningInteractiveVis/requirements.txt .
+COPY ./requirements.txt .
 
 # install dependencies
 RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # copy the content of the local src directory to the working directory
-COPY ../DeepLearningInteractiveVis/ .
+COPY . .
+
+# metadata to describe which port the container is listening on at runtime
+EXPOSE 5006
 
 # command to run on container start
 CMD bokeh serve --port 5006 --allow-websocket-origin=*:5006 InteractiveVis/
