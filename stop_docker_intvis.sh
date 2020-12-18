@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# get id of intvis container
-containerid=$( docker ps | grep intvis | cut -d" " -f1 )
+# get id of interactivevis container
+containerid=$( docker ps | grep interactivevis | cut -d" " -f1 )
 
 if [ -z "$containerid" ]; then
-  echo "no running intvis docker instance found" > /dev/stderr
+  echo "no running interactivevis docker instance found" > /dev/stderr
 else
-  echo -n "stopping docker intvis instance: "
+  echo -n "stopping docker interactivevis instance: "
   docker stop "$containerid"
 fi
