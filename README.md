@@ -20,17 +20,18 @@ Order of script execution:
 
 The interactive bokeh application [InteractiveVis](InteractiveVis) can be run for inspecting the created relevance maps overlaid on the original input images.
 
-To run it, there are two options.
+To run it, there are three options.
 
-1. Point the anaconda prompt to the DeepLearningInteractiveVis main directory and then run bokeh using:
+1. We set up a public web service to quickly try it out: [http://explaination.net:5006/InteractiveVis](http://explaination.net:5006/InteractiveVis)
+
+2. Alternatively download the docker container from DockerHub: ```sudo docker pull martindyrba/interactivevis```
+Then use the scripts ```sudo ./[run_docker_intvis.sh](run_docker_intvis.sh)``` and ```sudo ./[stop_docker_intvis.sh](stop_docker_intvis.sh)``` to run or stop the Bokeh app.  
+After starting the docker container, the app will be available from your web browser: [http://localhost:5006/InteractiveVis](http://localhost:5006/InteractiveVis)
+
+3. Download this Git repository. Install the required Python modules (see below). Then point the anaconda prompt to the DeepLearningInteractiveVis main directory and then run Bokeh using:
 ```
 bokeh serve InteractiveVis --show
 ```
-
-2. Alternatively download the docker container from my [Nextcloud folder](https://nextcloud.dzne.de/index.php/s/MPWSDzKgfJWCH5W)  
-Then use the scripts ```install_docker_image_intvis.sh```, ```run_docker_intvis.sh```, and ```stop_docker_intvis.sh``` to install, run, and stop the Bokeh app, respectively.
-
-After running Bokeh, the app will be available from your web browser: [http://localhost:5006/InteractiveVis](http://localhost:5006/InteractiveVis)
 
 
 ![Screenshot of the InteractiveVis app](Screenshot_InteractiveVis.png)*Screenshot of the InteractiveVis app*
@@ -41,15 +42,18 @@ After running Bokeh, the app will be available from your web browser: [http://lo
 
 ### Requirements and installation:
 
-To be able to run the visualization software, you need Python 2 or 3, specifically <3.8, in order to install tensorflow==1.15  
+To be able to run the interactive visualization, you need Python 2 or 3 (specifically Python <3.8, in order to install tensorflow==1.15)  
 Note: on some systems it is recommended to install some dependencies using the default package manager instead of pip. e.g.
 `sudo apt-get install python-numpy python-scipy python-tk`
 or
 `sudo yum install scipy numpy tkinter`
 
+Also, it is recommended to first create a new Python environment (using [virtualenv/venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)) to avoid messing up your local Python modules/versions when you have other coding projects or a system shared by various users.
+
 Run pip/pip3 to install the dependencies:
 `pip install -r requirements.txt`  
-Note: create a new Python environment first to avoid messing up your installed Python modules/versions when you have other coding projects.
+Then you can start the Bokeh application as indicated above.
+
 
 
 ### License:
