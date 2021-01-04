@@ -3,7 +3,7 @@ keras==2.2.4
 tensorflow==1.15.4
 bokeh==1.4.0
 numpy==1.18.5
-xlrd==2.0.1
+openpyxl==3.0.5
 h5py==2.10.0
 pandas==1.1.5
 matplotlib==3.3.3

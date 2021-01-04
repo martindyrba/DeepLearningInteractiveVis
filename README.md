@@ -2,7 +2,7 @@
 
 This folder contains all code to learn a deep learning model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
 The model structure has higher stability for whole-brain data as the first model which used only on hippocampal coronal slices as input (reduced field-of-view).  
-Publishing of the results is submitted (Dec. 2020).
+Publishing of the results is submitted (Dec. 2020). You can find the preprint on [arXiv:2012.10294](https://arxiv.org/abs/2012.10294)
 
 ![Screenshot of the InteractiveVis app](Screenshot_InteractiveVis.png)*Screenshot of the InteractiveVis app*
 
@@ -17,7 +17,7 @@ The interactive bokeh application [InteractiveVis](InteractiveVis) can be run fo
 
 To run it, there are three options.
 
-1. We set up a public web service to quickly try it out: [http://explaination.net:5006/InteractiveVis](http://explaination.net:5006/InteractiveVis)
+1. We set up a public web service to quickly try it out: [https://explaination.net/InteractiveVis](https://explaination.net/InteractiveVis)
 
 2. Alternatively download the docker container from DockerHub: ```sudo docker pull martindyrba/interactivevis```
 Then use the scripts ```sudo ./run_docker_intvis.sh``` and ```sudo ./stop_docker_intvis.sh``` to run or stop the Bokeh app. (You find both files above in this repository.)  
