@@ -1,4 +1,3 @@
-#datamodel.py
 #!/usr/bin/env python
 # coding: utf-8
 from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, background_images_path, residuals_path, covariates_file

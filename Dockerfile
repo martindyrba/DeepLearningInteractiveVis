@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 5006
 
 # command to run on container start
-CMD bokeh serve --port 5006 --allow-websocket-origin=*:5006 InteractiveVis/
+CMD bokeh serve --port 5006 --allow-websocket-origin='*' --allow-websocket-origin='*:5006' InteractiveVis/

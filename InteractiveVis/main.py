@@ -4,12 +4,13 @@
 
 from config import debug
 import datamodel as m
-import view as v
+import view
 from bokeh.events import Tap
 import sys
 
 
 dontplot = False
+v = view.View() #construct new View object for every session since bokeh models cannot be shared across client sessions
 
 def click_frontal_callback(event):
     if debug: print("Called click_frontal_callback().")
@@ -131,7 +132,7 @@ def select_model_callback(attr, old, new):
     v.disable_widgets()
     v.curdoc().hold()
 
-    print("Called select_model_callback().")
+    if debug: print("Called select_model_callback().")
     m.set_model(v.model_select.value)
     select_subject_callback('','','')
 
