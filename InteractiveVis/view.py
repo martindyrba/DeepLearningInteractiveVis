@@ -105,7 +105,8 @@ class View():
     def bg2RGBA(self, bg):
         img = bg/4 + 0.25 # rescale to range of approx. 0..1 float
         img = np.uint8(cm.gray(img) * 255)
-        return img
+        ret = img.view("uint32").reshape(img.shape[:2]) # convert to 3D array of uint32
+        return ret
 
     def overlay2RGBA(self, map, alpha = 0.5):
         # assume map to be in range of -1..1 with 0 for hidden content
@@ -114,8 +115,8 @@ class View():
         map = map/2 + 0.5 # range 0-1 float
         ovl = np.uint8(cm.jet(map) * 255) # cm translates range 0 - 255 uint to rgba array
         ovl[:,:,3] = np.uint8(alpha_mask * 255) # replace alpha channel (fourth dim) with calculated values
-        return ovl
-
+        ret = ovl.view("uint32").reshape(ovl.shape[:2]) # convert to 3D array of uint32
+        return ret
 
     def region2RGBA(self, rg, alpha = 0.5):
         
@@ -129,8 +130,9 @@ class View():
         alpha_mask[alpha_mask == 1] = alpha
         img = np.uint8(cm.autumn(rgcopy)* 255)
         img[:,:,3] = np.uint8(alpha_mask * 255 )
-        return img
-    
+        ret = img.view("uint32").reshape(img.shape[:2]) # convert to 3D array of uint32
+        return ret
+
     def update_guide_frontal(self):
             global firstrun, pos_area_frontal, pos_line_frontal, neg_area_frontal, neg_line_frontal, hist_frontal
             x = np.arange(0, sum_neg_frontal.shape[0])

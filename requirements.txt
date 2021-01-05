@@ -1,7 +1,7 @@
 innvestigate==1.0.9
 keras==2.2.4
 tensorflow==1.15.4
-bokeh==1.4.0
+bokeh==2.2.3
 numpy==1.18.5
 openpyxl==3.0.5
 h5py==2.10.0
