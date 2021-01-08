@@ -6,3 +6,21 @@
 
 {% endblock %}
 
+{% block contents %}
+    {{ super() }}
+
+    <div class="bk-root bk" style="width: 1010px; margin-top: 40px; margin-left: 5px; background: #00000020; height: 7.5em">
+
+        <div style="width: 500px; float: left; height: inherit">
+        The <strong>interactive relevance map visualization app</strong> displays brain areas that contribute to the model’s decision.<br><br>
+        <strong>Disclaimer:</strong> This app is not intended to be used for clinical use and decision making. Although the models achieve a high average accuracy, they are still subject of research. <strong>This app is provided for illustration purpose only.</strong>
+        </div>
+
+        <div style="width: 250px; float: left; text-align: right; height: inherit">
+        Get the code on <a href="https://github.com/martindyrba/DeepLearningInteractiveVis">GitHub</a>
+        </div>
+        
+        <div style="width: 250px; float: left; text-align: right; height: inherit">
+        Read the paper on <a href="https://arxiv.org/abs/2012.10294">arXiv:2012.10294</a>
+    </div>
+{% endblock %}
