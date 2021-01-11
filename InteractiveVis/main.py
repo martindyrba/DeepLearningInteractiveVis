@@ -3,14 +3,15 @@
 # controller module
 
 from config import debug
-import datamodel as m
+from datamodel import index_lst, sorted_xs, Model
 import view
 from bokeh.events import Tap
 import sys
 
 
 dontplot = False
-v = view.View() #construct new View object for every session since bokeh models cannot be shared across client sessions
+m = Model() #construct new datamodel object for storing selected subject/cnn model per session
+v = view.View(m) #construct new View object for every session since bokeh models (i.e. sliders, figures, ...) cannot be shared across client sessions
 
 def click_frontal_callback(event):
     if debug: print("Called click_frontal_callback().")
@@ -107,9 +108,9 @@ def select_subject_callback(attr, old, new):
     if debug: print("Called select_subject_callback().")
     v.disable_widgets()
     
-    m.set_subject( m.index_lst[m.sorted_xs.index(v.subject_select.value)] ) #this parameter is subj_id
+    m.set_subject( index_lst[sorted_xs.index(v.subject_select.value)] ) #this parameter is subj_id
     
-    v.update_subject_divs(m.index_lst[m.sorted_xs.index(v.subject_select.value)]) #called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
+    v.update_subject_divs(index_lst[sorted_xs.index(v.subject_select.value)]) #called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
 
     v.p_frontal.title.text = "Scan predicted as %0.2f%% Alzheimer\'s" % m.pred
     v.p_axial.title.text = " "
@@ -225,7 +226,7 @@ v.model_select.on_change('value', select_model_callback)
 
 # In[19]:
 
-v.subject_select.value=m.sorted_xs[0]
+v.subject_select.value=sorted_xs[0]
 
 # automatically close bokeh after browser window was closed
 #def close_session(session_context):

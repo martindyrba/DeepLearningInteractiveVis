@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-firstrun = True #Set to false from main.py after first run.
 
 from bokeh.models.widgets import Select
 from bokeh.layouts import column, row, Spacer
@@ -16,12 +15,9 @@ from matplotlib import cm
 from skimage.measure import label, regionprops
 
 from config import scale_factor
-import datamodel as m
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_ID, aal_drawn, age, cov_idx, sex, tiv
 from config import debug
-
-
 
 
 class View():
@@ -33,7 +29,7 @@ class View():
         self.region_div.update(text="Region: " + self.selected_region)
 
     def update_cluster_divs(self):
-        cluster_index = clust_labelimg[m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
+        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
         if cluster_index == 0:
             self.cluster_size_div.update(text="Cluster Size: " + "N/A")
             self.cluster_mean_div.update(text="Mean Intensity: " + "N/A")
@@ -45,7 +41,6 @@ class View():
 
     def update_subject_divs(self, subj_id):
         if debug: print("Called update_subject_divs().")
-
         self.age_div.update(text="Age: %.0f " % age.iloc[cov_idx[subj_id]])
         if (sex.iloc[cov_idx[subj_id]] == 1):
             self.sex_div.update(text="Sex: " + "female")
@@ -57,19 +52,16 @@ class View():
         self.tiv_div.update(text="TIV: %.0f cm³" % tiv.iloc[cov_idx[subj_id]])
 
 
-
-    
-
     def apply_thresholds(self, map, threshold = 0.5, cluster_size = 20):
         if debug: print("Called apply_thresholds().")
-        global overlay, sum_pos_frontal, sum_neg_frontal, sum_pos_axial, sum_neg_axial, sum_pos_sagittal, sum_neg_sagittal, clust_sizes, clust_labelimg, clust_sizes_drawn, clust_mean_intensities, clust_peak_intensities # define global variables to store subject data
-        overlay = np.copy(map)
-        overlay[np.abs(overlay) < threshold] = 0 # completely hide low values
+        global clust_sizes, clust_labelimg, clust_sizes_drawn, clust_mean_intensities, clust_peak_intensities # define global variables to store subject data
+        self.overlay = np.copy(map)
+        self.overlay[np.abs(self.overlay) < threshold] = 0 # completely hide low values
         # cluster_size filtering
-        labelimg = np.copy(overlay)
+        labelimg = np.copy(self.overlay)
         labelimg[labelimg>0] = 1 # binarize img
         labelimg = label(labelimg, connectivity=2)
-        lprops = regionprops(labelimg, intensity_image=overlay)
+        lprops = regionprops(labelimg, intensity_image=self.overlay)
         clust_sizes = []
         clust_sizes_drawn = np.zeros(len(lprops)+1, dtype=np.uint32) #just those that show up in the end on canvas
         clust_mean_intensities = np.zeros(len(lprops)+1, dtype=np.float64)
@@ -86,21 +78,18 @@ class View():
                 clust_peak_intensities[lab.label] = 0
         clust_labelimg = np.copy(labelimg)
         labelimg[labelimg>0] = 1 # create binary mask
-        np.multiply(overlay, labelimg, out=overlay)
-        tmp = np.copy(overlay)
+        np.multiply(self.overlay, labelimg, out=self.overlay)
+        tmp = np.copy(self.overlay)
         tmp[tmp<0] = 0
-        sum_pos_frontal = np.sum(tmp, axis=(0,1)) # sum of pos relevance in slices
-        sum_pos_axial = np.sum(tmp, axis=(2,1))
-        sum_pos_sagittal = np.sum(tmp, axis=(2,0))
-        tmp = np.copy(overlay)
+        self.sum_pos_frontal = np.sum(tmp, axis=(0,1)) # sum of pos relevance in slices
+        self.sum_pos_axial = np.sum(tmp, axis=(2,1))
+        self.sum_pos_sagittal = np.sum(tmp, axis=(2,0))
+        tmp = np.copy(self.overlay)
         tmp[tmp>0] = 0
-        sum_neg_frontal = np.sum(tmp, axis=(0,1)) # sum of neg relevance in slices
-        sum_neg_axial = np.sum(tmp, axis=(2,1))
-        sum_neg_sagittal = np.sum(tmp, axis=(2,0))
-        return overlay # result also stored in global variables: overlay, sum_pos*, sum_neg*
-
-
-
+        self.sum_neg_frontal = np.sum(tmp, axis=(0,1)) # sum of neg relevance in slices
+        self.sum_neg_axial = np.sum(tmp, axis=(2,1))
+        self.sum_neg_sagittal = np.sum(tmp, axis=(2,0))
+        return self.overlay # result also stored in object variables: self.overlay, self.sum_pos*, self.sum_neg*
 
     def bg2RGBA(self, bg):
         img = bg/4 + 0.25 # rescale to range of approx. 0..1 float
@@ -119,7 +108,6 @@ class View():
         return ret
 
     def region2RGBA(self, rg, alpha = 0.5):
-        
         rgcopy = np.copy(rg)
         if self.region_ID != 0:
             rgcopy[rgcopy != self.region_ID] = 0
@@ -134,152 +122,131 @@ class View():
         return ret
 
     def update_guide_frontal(self):
-            global firstrun, pos_area_frontal, pos_line_frontal, neg_area_frontal, neg_line_frontal, hist_frontal
-            x = np.arange(0, sum_neg_frontal.shape[0])
+            x = np.arange(0, self.sum_neg_frontal.shape[0])
             y0 = np.zeros(x.shape, dtype=int)
-            if firstrun:
+            if self.firstrun:
                 # initialize/create plots
                 self.guide_frontal.line(x, y0, color="#000000")
-                pos_area_frontal = self.guide_frontal.varea(x=x, y1=sum_pos_frontal, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_frontal")
-                pos_line_frontal = self.guide_frontal.line(x, y=sum_pos_frontal, line_width=2, color="#d22a40", name="pos_line_frontal")
-                neg_area_frontal = self.guide_frontal.varea(x=x, y1=sum_neg_frontal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_frontal")
-                neg_line_frontal = self.guide_frontal.line(x, y=sum_neg_frontal, line_width=2, color="#36689b", name="neg_line_frontal")
+                self.pos_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_pos_frontal, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_frontal")
+                self.pos_line_frontal = self.guide_frontal.line(x, y=self.sum_pos_frontal, line_width=2, color="#d22a40", name="pos_line_frontal")
+                self.neg_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_neg_frontal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_frontal")
+                self.neg_line_frontal = self.guide_frontal.line(x, y=self.sum_neg_frontal, line_width=2, color="#36689b", name="neg_line_frontal")
                 # calc histogram; clip high values to slider max (=200)
                 [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-                hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_frontal")
+                self.hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_frontal")
                 #firstrun_frontal = False
             else: # update plots
                 curdoc().hold() # disable page updates
-                pos_area_frontal.data_source.data = {'x':x, 'y1':sum_pos_frontal, 'y2':y0}
-                pos_line_frontal.data_source.data = {'x':x, 'y':sum_neg_frontal}
-                neg_area_frontal.data_source.data = {'x':x, 'y1':sum_neg_frontal, 'y2':y0}
-                neg_line_frontal.data_source.data = {'x':x, 'y':sum_neg_frontal}
-                [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=clust_hist_bins)
-                hist_frontal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
+                self.pos_area_frontal.data_source.data = {'x':x, 'y1':self.sum_pos_frontal, 'y2':y0}
+                self.pos_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
+                self.neg_area_frontal.data_source.data = {'x':x, 'y1':self.sum_neg_frontal, 'y2':y0}
+                self.neg_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
+                [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+                self.hist_frontal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
                 curdoc().unhold() # enable page updates again
 
     def update_guide_axial(self):
-        global firstrun, pos_area_axial, pos_line_axial, neg_area_axial, neg_line_axial, hist_axial
-        x_mirrored = np.arange(0, sum_neg_axial.shape[0]) #needs to be flipped
+        x_mirrored = np.arange(0, self.sum_neg_axial.shape[0]) #needs to be flipped
         x = x_mirrored[::-1]
         y0 = np.zeros(x.shape, dtype=int)
-        if firstrun:
+        if self.firstrun:
             # initialize/create plots
             self.guide_axial.line(x, y0, color="#000000")
-            pos_area_axial = self.guide_axial.varea(x=x, y1=sum_pos_axial, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_axial")
-            pos_line_axial = self.guide_axial.line(x, y=sum_pos_axial, line_width=2, color="#d22a40", name="pos_line_axial")
-            neg_area_axial = self.guide_axial.varea(x=x, y1=sum_neg_axial, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_axial")
-            neg_line_axial = self.guide_axial.line(x, y=sum_neg_axial, line_width=2, color="#36689b", name="neg_line_axial")
+            self.pos_area_axial = self.guide_axial.varea(x=x, y1=self.sum_pos_axial, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_axial")
+            self.pos_line_axial = self.guide_axial.line(x, y=self.sum_pos_axial, line_width=2, color="#d22a40", name="pos_line_axial")
+            self.neg_area_axial = self.guide_axial.varea(x=x, y1=self.sum_neg_axial, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_axial")
+            self.neg_line_axial = self.guide_axial.line(x, y=self.sum_neg_axial, line_width=2, color="#36689b", name="neg_line_axial")
             # calc histogram; clip high values to slider max (=200)
             [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            hist_axial = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_axial")
+            self.hist_axial = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_axial")
             #firstrun_axial = False
         else: # update plots
             curdoc().hold() # disable page updates
-            pos_area_axial.data_source.data = {'x':x, 'y1':sum_pos_axial, 'y2':y0}
-            pos_line_axial.data_source.data = {'x':x, 'y':sum_neg_axial}
-            neg_area_axial.data_source.data = {'x':x, 'y1':sum_neg_axial, 'y2':y0}
-            neg_line_axial.data_source.data = {'x':x, 'y':sum_neg_axial}
-            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=clust_hist_bins)
-            hist_axial.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
+            self.pos_area_axial.data_source.data = {'x':x, 'y1':self.sum_pos_axial, 'y2':y0}
+            self.pos_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
+            self.neg_area_axial.data_source.data = {'x':x, 'y1':self.sum_neg_axial, 'y2':y0}
+            self.neg_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
+            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            self.hist_axial.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
             curdoc().unhold() # enable page updates again
 
     def update_guide_sagittal(self):
-        global firstrun, pos_area_sagittal, pos_line_sagittal, neg_area_sagittal, neg_line_sagittal, hist_sagittal
-        x = np.arange(0, sum_neg_sagittal.shape[0])
+        x = np.arange(0, self.sum_neg_sagittal.shape[0])
         y0 = np.zeros(x.shape, dtype=int)
-        if firstrun:
+        if self.firstrun:
             # initialize/create plots
             self.guide_sagittal.line(x, y0, color="#000000")
-            pos_area_sagittal = self.guide_sagittal.varea(x=x, y1=sum_pos_sagittal, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_sagittal")
-            pos_line_sagittal = self.guide_sagittal.line(x, y=sum_pos_sagittal, line_width=2, color="#d22a40", name="pos_line_sagittal")
-            neg_area_sagittal = self.guide_sagittal.varea(x=x, y1=sum_neg_sagittal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_sagittal")
-            neg_line_sagittal = self.guide_sagittal.line(x, y=sum_neg_sagittal, line_width=2, color="#36689b", name="neg_line_sagittal")
+            self.pos_area_sagittal = self.guide_sagittal.varea(x=x, y1=self.sum_pos_sagittal, y2=y0, fill_color ="#d22a40", fill_alpha =0.8, name="pos_area_sagittal")
+            self.pos_line_sagittal = self.guide_sagittal.line(x, y=self.sum_pos_sagittal, line_width=2, color="#d22a40", name="pos_line_sagittal")
+            self.neg_area_sagittal = self.guide_sagittal.varea(x=x, y1=self.sum_neg_sagittal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_sagittal")
+            self.neg_line_sagittal = self.guide_sagittal.line(x, y=self.sum_neg_sagittal, line_width=2, color="#36689b", name="neg_line_sagittal")
             # calc histogram; clip high values to slider max (=200)
             [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            hist_sagittal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_sagittal")
+            self.hist_sagittal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_sagittal")
             #firstrun_sagittal = False
         else: # update plots
             curdoc().hold() # disable page updates
-            pos_area_sagittal.data_source.data = {'x':x, 'y1':sum_pos_sagittal, 'y2':y0}
-            pos_line_sagittal.data_source.data = {'x':x, 'y':sum_neg_sagittal}
-            neg_area_sagittal.data_source.data = {'x':x, 'y1':sum_neg_sagittal, 'y2':y0}
-            neg_line_sagittal.data_source.data = {'x':x, 'y':sum_neg_sagittal}
+            self.pos_area_sagittal.data_source.data = {'x':x, 'y1':self.sum_pos_sagittal, 'y2':y0}
+            self.pos_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
+            self.neg_area_sagittal.data_source.data = {'x':x, 'y1':self.sum_neg_sagittal, 'y2':y0}
+            self.neg_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
             [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            hist_sagittal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
+            self.hist_sagittal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
             curdoc().unhold() # enable page updates again
 
     def plot_frontal(self):
         if debug: print("Called plot_frontal().")
-
-        bg = m.subj_bg[:,:,self.slice_slider_frontal.value-1]
+        bg = self.m.subj_bg[:,:,self.slice_slider_frontal.value-1]
         bg = self.bg2RGBA(bg)
         bg = np.flipud(bg)
-
-        ovl = overlay[:,:,self.slice_slider_frontal.value-1]
+        ovl = self.overlay[:,:,self.slice_slider_frontal.value-1]
         ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
         ovl = np.flipud(ovl)
-
         self.p_frontal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
         if (self.toggle_regions.active):
             self.plot_frontal_region()
-
 
     def plot_frontal_region(self):
         if debug: print("Called plot_frontal_region().")
         rg = aal_drawn[:,:,self.slice_slider_frontal.value-1] #rg = region
         rg = self.region2RGBA(rg)
-
         self.p_frontal.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0], level='glyph') #for bokeh render levels see Readme
 
     def plot_axial(self):
         if debug: print("Called plot_axial().")
-
-        bg = m.subj_bg[m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
+        bg = self.m.subj_bg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
         bg = self.bg2RGBA(bg)
         bg = np.rot90(bg)
-
-        ovl = overlay[m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
+        ovl = self.overlay[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
         ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
         ovl = np.rot90(ovl)
-
-
         self.p_axial.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
         if (self.toggle_regions.active):
             self.plot_axial_region()
 
-
     def plot_axial_region(self):
         if debug: print("Called plot_axial_region().")
-
         rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
         rg = self.region2RGBA(rg)
         rg = np.rot90(rg)
-
         self.p_axial.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0],  level='glyph')
 
     def plot_sagittal(self):
         if debug: print("Called plot_sagittal().")
-
-        bg = m.subj_bg[:,self.slice_slider_sagittal.value-1,:]
+        bg = self.m.subj_bg[:,self.slice_slider_sagittal.value-1,:]
         bg = self.bg2RGBA(bg)
         bg = np.flipud(bg)
-
-        ovl = overlay[:,self.slice_slider_sagittal.value-1,:]
+        ovl = self.overlay[:,self.slice_slider_sagittal.value-1,:]
         ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
         ovl = np.flipud(ovl)
-
-
         self.p_sagittal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
         if (self.toggle_regions.active):
             self.plot_sagittal_region()
 
     def plot_sagittal_region(self):
         if debug: print("Called plot_sagittal_region().")
-
         rg = aal_drawn[:,self.slice_slider_sagittal.value-1,:] #rg = region
         rg = self.region2RGBA(rg)
-
         self.p_sagittal.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0],  level='glyph')
 
 
@@ -311,9 +278,11 @@ class View():
         self.toggle_regions.update(disabled=False)
         self.loading_label.update(visible=False)
     
-    def __init__(self):
+    def __init__(self, m):
         if debug: print("Initializing new View object...")
         self.curdoc = curdoc
+        self.m = m
+        self.firstrun = True
         self.subject_select = Select(title="Subjects:", value=sorted_xs[0], options=sorted_xs, width=200)
         self.model_select = Select(title="Model:", value=selected_model, options=stored_models, width=200)
         self.slice_slider_frontal = Slider(start=1, end=m.subj_bg.shape[2], value=50, step=1,
@@ -364,7 +333,6 @@ class View():
         self.clusthist.x_range.range_padding = 0
         self.clusthist.y_range.range_padding = 0
 
-
         self.p_frontal = figure(plot_width=int(np.floor(m.subj_bg.shape[1]*scale_factor)), plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)), title='',
                   toolbar_location=None,
                   active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
@@ -380,8 +348,6 @@ class View():
         self.p_frontal.add_layout(self.frontal_crosshair_from_sagittal)
         self.p_frontal.add_layout(self.frontal_crosshair_from_axial)
 
-
-
         self.p_axial = figure(plot_width=int(np.floor(m.subj_bg.shape[1]*scale_factor)), plot_height=int(np.floor(m.subj_bg.shape[2]*scale_factor)), title='',
                   toolbar_location=None,
                   active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
@@ -393,8 +359,6 @@ class View():
         self.axial_crosshair_from_frontal = Span(location=self.slice_slider_frontal.end-self.slice_slider_frontal.value + 1, dimension='width', line_color='green', line_dash='dashed', line_width=2)
         self.p_axial.add_layout(self.axial_crosshair_from_sagittal)
         self.p_axial.add_layout(self.axial_crosshair_from_frontal)
-
-
 
         self.p_sagittal = figure(plot_width=int(np.floor(m.subj_bg.shape[2]*scale_factor)), plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)), title='',
                   toolbar_location=None,
@@ -420,11 +384,7 @@ class View():
 
         self.p_axial.add_layout(self.loading_label)
 
-
-
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
-
-
 
         self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
@@ -438,7 +398,6 @@ class View():
         self.age_div = Div(text="Age: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"]) #no subject selected at time of initialization
         self.sex_div = Div(text="Sex: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"])
         self.tiv_div = Div(text="TIV: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"])
-
 
         # initialize column layout
         self.layout = row(
@@ -457,8 +416,6 @@ class View():
                                 column(self.p_sagittal, self.slice_slider_sagittal, self.guide_sagittal))
                         )
                       )
-
-
 
         # define other callback functions for the sliders
         self.clust_hist_bins = list(range(0, 250+1, 10)) # list from (0, 10, .., 250); range max is slider_max_size+1        
