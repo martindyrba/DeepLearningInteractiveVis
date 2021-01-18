@@ -9,9 +9,7 @@ from bokeh.events import Tap
 import sys
 
 
-dontplot = False
-m = Model() #construct new datamodel object for storing selected subject/cnn model per session
-v = view.View(m) #construct new View object for every session since bokeh models (i.e. sliders, figures, ...) cannot be shared across client sessions
+
 
 def click_frontal_callback(event):
     if debug: print("Called click_frontal_callback().")
@@ -90,25 +88,11 @@ def click_sagittal_callback(event):
 
 
 
-v.p_frontal.on_event(Tap, click_frontal_callback)
-v.p_axial.on_event(Tap, click_axial_callback)
-v.p_sagittal.on_event(Tap, click_sagittal_callback)
-
-
-
-# for jupyter notebook:
-#show(layout)
-# alternatively, add layout to the document (for bokeh server)
-v.curdoc().add_root(v.layout)
-v.curdoc().title = 'Online AD brain viewer'
-
-
-
-def select_subject_callback(attr, old, new):
-    if debug: print("Called select_subject_callback().")
-    v.disable_widgets()
-    
-    m.set_subject( index_lst[sorted_xs.index(v.subject_select.value)] ) #this parameter is subj_id
+def select_subject_worker():
+    if debug: print("Called select_subject_worker().")
+    v.curdoc().hold()
+    if not v.firstrun: # Avoid duplicate set_subject() call when application first starts.
+        m.set_subject( index_lst[sorted_xs.index(v.subject_select.value)] ) #this parameter is subj_id
     
     v.update_subject_divs(index_lst[sorted_xs.index(v.subject_select.value)]) #called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
 
@@ -126,20 +110,29 @@ def select_subject_callback(attr, old, new):
     v.plot_sagittal()
     v.update_cluster_divs()
     v.enable_widgets()
+    v.curdoc().unhold()
 
+def select_subject_callback(attr, old, new):
+    if debug: print("Called select_subject_callback().")
+    v.disable_widgets()
+    # This branching is necessary because the 'next tick' occurs only after the entire main script is run.
+    # In that case firstrun would already be set to False and the v.update_guide_*() calls would not initialize properly.
+    if v.firstrun:
+        select_subject_worker()
+    else:
+        v.curdoc().add_next_tick_callback(select_subject_worker)
+            
+    
 
 
 def select_model_callback(attr, old, new):
     v.disable_widgets()
-    v.curdoc().hold()
 
     if debug: print("Called select_model_callback().")
     m.set_model(v.model_select.value)
-    select_subject_callback('','','')
-
-    v.curdoc().unhold()
+    v.curdoc().add_next_tick_callback(select_subject_worker)
     print("Finished selecting new model.")
-    v.enable_widgets()
+    
 
 
 def apply_thresholds_callback(attr, old, new):
@@ -193,11 +186,13 @@ def set_slice_sagittal_callback(attr, old, new):
         v.plot_axial()
 
 def set_transparency_callback(attr, old, new):
+    if debug: print("Called set_transparency_callback().")
     v.plot_frontal()
     v.plot_axial()
     v.plot_sagittal()
 
 def click_show_regions_callback(attr):
+    if debug: print("Called click_show_regions_callback().")
     if(v.toggle_regions.active):
         v.plot_frontal_region()
         v.plot_axial_region()
@@ -207,12 +202,28 @@ def click_show_regions_callback(attr):
         v.plot_axial()
         v.plot_sagittal()
 
+dontplot = False
+m = Model() #construct new datamodel object for storing selected subject/cnn model per session
+v = view.View(m) #construct new View object for every session since bokeh models (i.e. sliders, figures, ...) cannot be shared across client sessions
+
+v.p_frontal.on_event(Tap, click_frontal_callback)
+v.p_axial.on_event(Tap, click_axial_callback)
+v.p_sagittal.on_event(Tap, click_sagittal_callback)
+
+
+
+# for jupyter notebook:
+#show(layout)
+# alternatively, add layout to the document (for bokeh server)
+v.curdoc().add_root(v.layout)
+v.curdoc().title = 'Online AD brain viewer'
+
 v.toggle_regions.on_click(click_show_regions_callback)
 v.subject_select.on_change('value', select_subject_callback)
 
 v.curdoc().hold()
 select_subject_callback('','','') # call once
-v.curdoc().unhold()
+#v.curdoc().unhold() #Redundant, is already unhold in select_subject_worker() call.
 v.firstrun = False
 
 v.slice_slider_frontal.on_change('value', set_slice_frontal_callback)
@@ -226,7 +237,7 @@ v.model_select.on_change('value', select_model_callback)
 
 # In[19]:
 
-v.subject_select.value=sorted_xs[0]
+#v.subject_select.value=sorted_xs[0] #Unnecessary, because already assigned in constructor of view object...?
 
 # automatically close bokeh after browser window was closed
 #def close_session(session_context):

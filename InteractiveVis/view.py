@@ -136,14 +136,13 @@ class View():
                 self.hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_frontal")
                 #firstrun_frontal = False
             else: # update plots
-                curdoc().hold() # disable page updates
                 self.pos_area_frontal.data_source.data = {'x':x, 'y1':self.sum_pos_frontal, 'y2':y0}
                 self.pos_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
                 self.neg_area_frontal.data_source.data = {'x':x, 'y1':self.sum_neg_frontal, 'y2':y0}
                 self.neg_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
                 [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
                 self.hist_frontal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
-                curdoc().unhold() # enable page updates again
+                
 
     def update_guide_axial(self):
         x_mirrored = np.arange(0, self.sum_neg_axial.shape[0]) #needs to be flipped
@@ -161,15 +160,14 @@ class View():
             self.hist_axial = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_axial")
             #firstrun_axial = False
         else: # update plots
-            curdoc().hold() # disable page updates
             self.pos_area_axial.data_source.data = {'x':x, 'y1':self.sum_pos_axial, 'y2':y0}
             self.pos_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
             self.neg_area_axial.data_source.data = {'x':x, 'y1':self.sum_neg_axial, 'y2':y0}
             self.neg_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
             [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_axial.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
-            curdoc().unhold() # enable page updates again
 
+            
     def update_guide_sagittal(self):
         x = np.arange(0, self.sum_neg_sagittal.shape[0])
         y0 = np.zeros(x.shape, dtype=int)
@@ -185,14 +183,13 @@ class View():
             self.hist_sagittal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_sagittal")
             #firstrun_sagittal = False
         else: # update plots
-            curdoc().hold() # disable page updates
             self.pos_area_sagittal.data_source.data = {'x':x, 'y1':self.sum_pos_sagittal, 'y2':y0}
             self.pos_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
             self.neg_area_sagittal.data_source.data = {'x':x, 'y1':self.sum_neg_sagittal, 'y2':y0}
             self.neg_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
             [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_sagittal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
-            curdoc().unhold() # enable page updates again
+
 
     def plot_frontal(self):
         if debug: print("Called plot_frontal().")
@@ -263,6 +260,7 @@ class View():
         self.clustersize_slider.update(disabled=True)
         self.transparency_slider.update(disabled=True)
         self.toggle_regions.update(disabled=True)
+        
 
     def enable_widgets(self):
         if debug: print("Called enable_widgets().")
@@ -277,12 +275,14 @@ class View():
         self.transparency_slider.update(disabled=False)
         self.toggle_regions.update(disabled=False)
         self.loading_label.update(visible=False)
+        
     
     def __init__(self, m):
         if debug: print("Initializing new View object...")
         self.curdoc = curdoc
         self.m = m
         self.firstrun = True
+
         self.subject_select = Select(title="Subjects:", value=sorted_xs[0], options=sorted_xs, width=200)
         self.model_select = Select(title="Model:", value=selected_model, options=stored_models, width=200)
         self.slice_slider_frontal = Slider(start=1, end=m.subj_bg.shape[2], value=50, step=1,
@@ -373,7 +373,7 @@ class View():
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_axial)
         
         self.loading_label = Label(
-                         text='Loading...', render_mode='css',
+                         text='Processing scan...', render_mode='css',
                          x_offset=self.p_axial.plot_width//2,
                          y_offset=self.p_axial.plot_height//2,
                          text_align='center', text_color='white',

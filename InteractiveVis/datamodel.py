@@ -252,7 +252,7 @@ class Model():
         return
         
     def __init__(self):
-        if debug: print("Constructing new model object...")
+        if debug: print("Initializing new datamodel object...")
         #load selected model data from dictionary:
         self.mymodel = model_dict[selected_model]["mymodel"]
         #model_wo_softmax = model_dict[selected_model]["model_wo_softmax"]
