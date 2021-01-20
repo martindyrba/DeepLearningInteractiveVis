@@ -12,6 +12,7 @@ from bokeh.models import Div, Toggle, Label, LinearColorMapper
 import numpy as np
 from PIL import Image
 from matplotlib import cm
+from matplotlib.colors import rgb2hex
 from skimage.measure import label, regionprops
 
 from config import scale_factor
