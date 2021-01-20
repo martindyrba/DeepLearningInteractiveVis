@@ -19,7 +19,7 @@ def click_frontal_callback(event):
     if event.x<1:
         x = 1
     elif event.x > v.slice_slider_sagittal.end:
-        x = slice_slider_sagittal.end
+        x = v.slice_slider_sagittal.end
     else:
         x = int(event.x)
 

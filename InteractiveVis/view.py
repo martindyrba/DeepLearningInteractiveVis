@@ -5,10 +5,10 @@ from bokeh.models.widgets import Select
 from bokeh.layouts import column, row, Spacer
 from bokeh.plotting import figure, curdoc
 from bokeh.io import output_notebook, push_notebook, show
-from bokeh.models.annotations import Span
+from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
 from bokeh.models.glyphs import Rect
-from bokeh.models import Div, Toggle, Label
+from bokeh.models import Div, Toggle, Label, LinearColorMapper
 import numpy as np
 from PIL import Image
 from matplotlib import cm
@@ -18,6 +18,11 @@ from config import scale_factor
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_ID, aal_drawn, age, cov_idx, sex, tiv
 from config import debug
+
+# Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
+jet_color_palette = []
+for i in range(0 , 256):
+    jet_color_palette.append(rgb2hex(cm.jet(i)))
 
 
 class View():
@@ -339,6 +344,26 @@ class View():
         self.p_frontal.axis.visible = False
         self.p_frontal.x_range.range_padding = 0
         self.p_frontal.y_range.range_padding = 0
+        
+        self.orientation_label_shown_left = Label(
+                         text='L', render_mode='css',
+                         text_align='left', text_color='white',
+                         text_font_size='25px', text_font_style='italic',
+                         border_line_color='white', border_line_alpha=1.0,
+                         background_fill_color='black', background_fill_alpha=0.5,
+                         level='overlay', visible=True)
+        self.orientation_label_shown_right = Label(
+                         text='R', render_mode='css',
+                         x = self.m.subj_bg.shape[1],
+                         text_align='right', text_color='white',
+                         text_font_size='25px', text_font_style='italic',
+                         border_line_color='white', border_line_alpha=1.0,
+                         background_fill_color='black', background_fill_alpha=0.5,
+                         level='overlay', visible=True)
+
+        self.p_frontal.add_layout(self.orientation_label_shown_left, 'center')
+        self.p_frontal.add_layout(self.orientation_label_shown_right, 'center')
+
 
         # The vertical crosshair line on the frontal view that indicates the selected sagittal slice.
         self.frontal_crosshair_from_sagittal = Span(location = self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_dash='dashed', line_width=2)
@@ -374,8 +399,8 @@ class View():
         
         self.loading_label = Label(
                          text='Processing scan...', render_mode='css',
-                         x_offset=self.p_axial.plot_width//2,
-                         y_offset=self.p_axial.plot_height//2,
+                         x=self.m.subj_bg.shape[1] // 2,
+                         y=self.m.subj_bg.shape[2] // 2,
                          text_align='center', text_color='white',
                          text_font_size='25px', text_font_style='italic',
                          border_line_color='white', border_line_alpha=1.0,
@@ -398,6 +423,21 @@ class View():
         self.age_div = Div(text="Age: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"]) #no subject selected at time of initialization
         self.sex_div = Div(text="Sex: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"])
         self.tiv_div = Div(text="TIV: " + "N/A", width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), css_classes=["subject_divs"])
+        
+        #Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a parent figure in Bokeh:
+        self.p_color_bar = figure(plot_width=100,
+            plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)) + 70 + self.guide_sagittal.plot_height,
+                title='',
+                toolbar_location=None,
+                active_drag=None, active_inspect=None, active_scroll=None, active_tap=None, outline_line_alpha = 0.0)
+        self.p_color_bar.axis.visible = False
+        self.p_color_bar.x_range.range_padding = 0
+        self.p_color_bar.y_range.range_padding = 0
+        
+        self.color_mapper = LinearColorMapper(palette=jet_color_palette, low=-1, high=1)
+        self.color_bar = ColorBar(color_mapper = self.color_mapper, title="Color Scale")
+        self.p_color_bar.add_layout(self.color_bar)
+
 
         # initialize column layout
         self.layout = row(
@@ -413,9 +453,11 @@ class View():
                             row(
                                 column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal),
                                 column(self.p_axial, self.slice_slider_axial, self.guide_axial),
-                                column(self.p_sagittal, self.slice_slider_sagittal, self.guide_sagittal))
+                                column(self.p_sagittal, self.slice_slider_sagittal, self.guide_sagittal),
+                                column(self.p_color_bar)
+                            )
                         )
-                      )
+                    )
 
-        # define other callback functions for the sliders
+
         self.clust_hist_bins = list(range(0, 250+1, 10)) # list from (0, 10, .., 250); range max is slider_max_size+1        
