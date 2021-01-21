@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 15.0.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Ebene_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="961.006px" height="525.5px" viewBox="17.422 -0.5 961.006 525.5" enable-background="new 17.422 -0.5 961.006 525.5"
+	 xml:space="preserve">
+<path fill="none" d="z"/>
+<g>
+	<rect x="39" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="180" height="26"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M129,25v500"/>
+	<g>
+		<text transform="matrix(1 0 0 1 69.4639 17.5)" font-family="'Helvetica'" font-size="12">page : HTMLwebpage</text>
+	</g>
+	<rect x="124" y="60" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="20"/>
+	<rect x="259" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="185" height="26"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M351.5,25v500"/>
+	<g>
+		<text transform="matrix(1 0 0 1 295.3125 17.5)" font-family="'Helvetica'" font-size="12">controller : Controller</text>
+	</g>
+	<rect x="346.5" y="45" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="450"/>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M134,80h204.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M345.38,80l-7,3.5v-7L345.38,80z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 137.5039 77)" font-family="'Helvetica'" font-size="11">select_subject_callback(value=‘AD 0005‘)</text>
+	</g>
+	<rect x="539" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="100" height="26"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M589,25v500"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 559.0967 17)" font-family="'Helvetica'" font-size="12">view : View</text>
+	</g>
+	<rect x="584" y="100" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="300" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="382" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="405" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="425" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="445" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="475" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="495" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="10"/>
+	<rect x="584" y="320" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="43"/>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,100.11h220.48"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M583.98,100.11l-7,3.5v-7L583.98,100.11z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 427.2793 97)" font-family="'Helvetica'" font-size="11">disable_widgets()</text>
+	</g>
+	<rect x="739" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="100" height="26"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M789,25v500"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 751.3154 17)" font-family="'Helvetica'" font-size="12">model : Model</text>
+	</g>
+	<rect x="784" y="130" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="140"/>
+	<rect x="789" y="150" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="20"/>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M794.01,133.92L794,137h20v13h-6.88"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M800.12,150l7-3.5v7L800.12,150z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 818 143)" font-family="'Helvetica'" font-size="11">mymodel.predict(test_img_5)</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M799.66,170.24
+		l19.34-0.16c6.667-0.053,10,3.253,10,9.92v5c0,3.333-3.333,5-10,5h-22.76"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M804.12,185.5l-9,4.5l9,4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 832.1387 184)" font-family="'Helvetica'" font-size="11">return prediction_5</text>
+	</g>
+	<rect x="789" y="220" pointer-events="all" fill="#FFFFFF" stroke="#000000" width="10" height="20"/>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M794,210h25v10h-11.88"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M800.12,220l7-3.5v7L800.12,220z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 822 216)" font-family="'Helvetica'" font-size="11">analyzer.analyze(orig_image_5)</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M800.33,240.64
+		l18.67,0.23c6.667,0.086,10,3.296,10,9.63v4.75c0,3.167-3.333,4.75-10,4.75h-22.76"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M804.12,255.5l-9,4.5l9,4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 832.3809 255)" font-family="'Helvetica'" font-size="11">return relevance_map_5</text>
+	</g>
+	<g>
+		<path pointer-events="all" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M589,323h249.541l16.959,9.66v24.84H589
+			V323z"/>
+		<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M838.5,323v10.5h16.833"/>
+		<g transform="translate(-0.5 -0.5)">
+			<text transform="matrix(1 0 0 1 591 337)" enable-background="new    "><tspan x="0" y="0" font-family="'Helvetica'" font-size="12">applies thresholds to create the overlay image</tspan><tspan x="0" y="14.4" font-family="'Helvetica'" font-size="12">and updates aggregated cluster/slice statistics</tspan></text>
+		</g>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,381.71h219.35"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.85,381.71l-7,3.5v-7L582.85,381.71z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 430.2485 379)" font-family="'Helvetica'" font-size="11">update_guides()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,405h219.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,405l-7,3.5v-7L582.88,405z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 440.124 402)" font-family="'Helvetica'" font-size="11">plot_frontal()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,425h219.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,425l-7,3.5v-7L582.88,425z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 444.0986 422)" font-family="'Helvetica'" font-size="11">plot_axial()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,445h219.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,445l-7,3.5v-7L582.88,445z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 437.9839 442)" font-family="'Helvetica'" font-size="11">plot_sagittal()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,475h219.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,475l-7,3.5v-7L582.88,475z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 418.417 472)" font-family="'Helvetica'" font-size="11">update_cluster_divs()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,495h219.38"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,495l-7,3.5v-7L582.88,495z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 429.1133 492)" font-family="'Helvetica'" font-size="11">enable_widgets()</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M588.5,517.86
+		H132.32"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M140.2,513.36l-9,4.5l9,4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 277.9395 515)" font-family="'Helvetica'" font-size="11">updated HTML with new subject</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,130.42h418.55"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M782.05,130.42l-7,3.5v-7L782.05,130.42z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 516.9531 127.4199)" font-family="'Helvetica'" font-size="11">set_subject(int subj_id=5)</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M784.23,270H358.74"
+		/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M366.62,265.5l-9,4.5l9,4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 440.9756 267)" font-family="'Helvetica'" font-size="11">return image_orig_5, prediction_5, relevance_map_5</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" stroke-dasharray="3,3" d="M584,363H389
+		c-6.667,0-13.333,0-20,0h-10.26"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M366.62,358.5l-9,4.5l9,4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 430.2568 360)" font-family="'Helvetica'" font-size="11">return overlay_5</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M34,60h92.26"/>
+	<ellipse pointer-events="all" stroke="#000000" cx="27" cy="60" rx="7" ry="7"/>
+	<path pointer-events="all" fill="none" stroke="#000000" stroke-miterlimit="10" d="M118.38,64.5l9-4.5l-9-4.5"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 17.9219 47)" font-family="'Helvetica'" font-size="11">user selects &quot;AD - 0005&quot;</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,300.029h218.51"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.01,300.029l-7,3.5v-7L582.01,300.029z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 366.0493 297)" font-family="'Helvetica'" font-size="11">update_subject_demographics(subj_id=5)</text>
+	</g>
+	<path pointer-events="stroke" fill="none" stroke="#000000" stroke-miterlimit="10" d="M356.5,320H469h106.88"/>
+	<path pointer-events="all" stroke="#000000" stroke-miterlimit="10" d="M582.88,320l-7,3.5v-7L582.88,320z"/>
+	<g transform="translate(-0.5 -0.5)">
+		<text transform="matrix(1 0 0 1 388 317)" enable-background="new    "><tspan x="0" y="0" font-family="'Helvetica'" font-size="11">apply_thresholds(relevance_map_5,</tspan><tspan x="0" y="13.2" font-family="'Helvetica'" font-size="11">   threshold=0.4, clustersize=60)</tspan></text>
+	</g>
+</g>
+<path fill="none" d="z"/>
+</svg>

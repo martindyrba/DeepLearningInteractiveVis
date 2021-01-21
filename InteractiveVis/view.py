@@ -25,7 +25,6 @@ jet_color_palette = []
 for i in range(0 , 256):
     jet_color_palette.append(rgb2hex(cm.jet(i)))
 
-
 class View():
     
     def update_region_div(self):
@@ -348,23 +347,25 @@ class View():
         
         self.orientation_label_shown_left = Label(
                          text='L', render_mode='css',
+                         x = 3,
+                         y = self.m.subj_bg.shape[0]-13,
                          text_align='left', text_color='white',
-                         text_font_size='25px', text_font_style='italic',
-                         border_line_color='white', border_line_alpha=1.0,
-                         background_fill_color='black', background_fill_alpha=0.5,
+                         text_font_size='20px', #text_font_style='italic',
+                         border_line_color='white', border_line_alpha=0,
+                         background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
         self.orientation_label_shown_right = Label(
                          text='R', render_mode='css',
-                         x = self.m.subj_bg.shape[1],
+                         x = self.m.subj_bg.shape[1]-3,
+                         y = self.m.subj_bg.shape[0]-13,
                          text_align='right', text_color='white',
-                         text_font_size='25px', text_font_style='italic',
-                         border_line_color='white', border_line_alpha=1.0,
-                         background_fill_color='black', background_fill_alpha=0.5,
+                         text_font_size='20px', #text_font_style='italic',
+                         border_line_color='white', border_line_alpha=0,
+                         background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
 
         self.p_frontal.add_layout(self.orientation_label_shown_left, 'center')
         self.p_frontal.add_layout(self.orientation_label_shown_right, 'center')
-
 
         # The vertical crosshair line on the frontal view that indicates the selected sagittal slice.
         self.frontal_crosshair_from_sagittal = Span(location = self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_dash='dashed', line_width=2)
@@ -427,18 +428,17 @@ class View():
         
         #Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a parent figure in Bokeh:
         self.p_color_bar = figure(plot_width=100,
-            plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)) + 70 + self.guide_sagittal.plot_height,
-                title='',
-                toolbar_location=None,
-                active_drag=None, active_inspect=None, active_scroll=None, active_tap=None, outline_line_alpha = 0.0)
+            plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)),# + 70 + self.guide_sagittal.plot_height,
+            title='',
+            toolbar_location=None,
+            active_drag=None, active_inspect=None, active_scroll=None, active_tap=None, outline_line_alpha = 0.0)
         self.p_color_bar.axis.visible = False
         self.p_color_bar.x_range.range_padding = 0
         self.p_color_bar.y_range.range_padding = 0
         
         self.color_mapper = LinearColorMapper(palette=jet_color_palette, low=-1, high=1)
-        self.color_bar = ColorBar(color_mapper = self.color_mapper, title="Color Scale")
+        self.color_bar = ColorBar(color_mapper = self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
-
 
         # initialize column layout
         self.layout = row(
@@ -459,6 +459,5 @@ class View():
                             )
                         )
                     )
-
 
         self.clust_hist_bins = list(range(0, 250+1, 10)) # list from (0, 10, .., 250); range max is slider_max_size+1        
