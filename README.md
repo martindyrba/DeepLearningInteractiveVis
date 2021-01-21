@@ -1,6 +1,6 @@
 # Deep Learning Interactive Visualization
 
-This folder contains all code to learn a deep learning model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
+This project contains all code to learn a deep learning model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
 The model structure has higher stability for whole-brain data as the first model which used only on hippocampal coronal slices as input (reduced field-of-view).  
 Publishing of the results is submitted (Dec. 2020). You can find the preprint on [arXiv:2012.10294](https://arxiv.org/abs/2012.10294)
 
@@ -62,6 +62,18 @@ The order of script execution was as follows:
 5. [extract_hippocampal_activation_newmodel.ipynb](extract_hippocampal_activation_newmodel.ipynb) to extract the hippocampal activity for all CV models (execution time: 10 minutes with CUDA-GPU)
 6. [extract_relevance_maps_as_nifti.ipynb](extract_relevance_maps_as_nifti.ipynb) to extract the relevance map overlays as nifti file for all participants/scans for a single model (execution time: 30 minutes with CUDA-GPU)
 7. [CreateDemoDataset.ipynb](CreateDemoDataset.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
+
+
+
+***
+
+
+
+### InteractiveVis architecture overview
+
+![InteractiveVis class diagram (v4)](InteractiveVis Classdiagram v4.svg)*InteractiveVis UML class diagram (v4)*
+
+![Select subject sequence diagram (v3)](select subject sequence diagram v3.svg)*Select subject UML sequence diagram (v3)*
 
 
 
