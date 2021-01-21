@@ -71,9 +71,10 @@ The order of script execution was as follows:
 
 ### InteractiveVis architecture overview
 
-![InteractiveVis class diagram (v4)](InteractiveVis Classdiagram v4.svg)*InteractiveVis UML class diagram (v4)*
-
-![Select subject sequence diagram (v3)](select subject sequence diagram v3.svg)*Select subject UML sequence diagram (v3)*
+*InteractiveVis UML class diagram (v4)*
+![InteractiveVis class diagram (v4)](InteractiveVis Classdiagram v4.svg)
+*Select subject UML sequence diagram (v3)*
+![Select subject sequence diagram (v3)](select subject sequence diagram v3.svg)
 
 
 
