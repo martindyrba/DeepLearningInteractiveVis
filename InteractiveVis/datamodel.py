@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, background_images_path, residuals_path, covariates_file
+from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, background_images_path, residuals_path, covariates_file, do_model_prefetch
 
 import pandas as pd
 import pickle, os, h5py
@@ -28,7 +28,6 @@ if debug:
     print(selected_model)
 
 
-# In[1]:
 
 # Import covariate data from file
 df = pd.read_pickle(covariates_file)
@@ -42,7 +41,6 @@ field = df['MRI_Field_Strength']
 grpbin = (grp > 1) # 1=CN, ...
 
 
-# In[3]:
 
 # Load matched covariate information
 with open('matched_cov_idx.pkl', 'rb') as cov_idx_file:
@@ -53,7 +51,6 @@ labels = pd.DataFrame({'Group':grpbin}).iloc[cov_idx, :]
 grps = pd.DataFrame({'Group':grp, 'RID':sid}).iloc[cov_idx, :]
 
 
-# In[4]:
 
 # Load residualized data from disk
 hf = h5py.File(residuals_path, 'r')
@@ -65,7 +62,6 @@ if debug:
     print(model_input_images.shape)
 
 
-# In[5]:
 
 # specify version of tensorflow
 #%tensorflow_version 1.x
@@ -88,7 +84,6 @@ if disable_gpu_for_tensorflow:
     os.environ["CUDA_VISIBLE_DEVICES"]="-1" #disable GPU computation for tensorflow (https://stackoverflow.com/questions/37660312/how-to-run-tensorflow-on-cpu)
 
 
-# In[5]:
 
 # Split data into training/validation and holdout test data
 labels = to_categorical(np.asarray(labels))
@@ -102,13 +97,11 @@ print('Distribution of diagnoses in data: [1=CN, 3=LMCI, 4=AD]')
 print(testgrps.Group.value_counts())
 
 
-# In[6]:
 
 test_images = model_input_images[test_idX, :]
 del model_input_images
 
 
-# In[7]:
 
 testgrps["Group"] = testgrps["Group"].map({1:"CN", 3:"MCI", 4:"AD"})
 Option_grps = np.array(testgrps)
@@ -135,7 +128,6 @@ def unzip(ls):
 sorted_xs, index_lst = unzip(Opt_grp)
 
 
-# In[9]:
 
 # Load original images (background) from disk
 hf = h5py.File(background_images_path, 'r')
@@ -150,7 +142,6 @@ if debug:
     print(testdat_bg.shape)
 
 
-# In[11]:
 
 # see https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb for a list of alternative methods
 methods = [ # tuple with method,     params,                  label
@@ -163,23 +154,34 @@ methods = [ # tuple with method,     params,                  label
             ("lrp.alpha_1_beta_0",   {"neuron_selection_mode":"index"},  "LRP-alpha1beta0"),
 ]
 
-# Preload CNN models from disk
-print("Preloading all " + str(len(stored_models)) + " models. This may take a while...")
-model_dict = dict()
-for model_path in stored_models:
-    print("Loading " + model_path + "...")
-    model_dict[model_path] = dict()
-    model_dict[model_path]["mymodel"] = load_model(model_path)
-    model_dict[model_path]["mymodel"].layers[-1].activation=tf.keras.activations.linear
-    model_dict[model_path]["mymodel"].save('tmp_wo_softmax.hdf5')
+model_cache = dict()
+
+def load_model_from_disk_into_cache(model_path):
+    global model_cache
+    print("Loading " + model_path + " from disk...")
+    model_cache[model_path] = dict()
+    model_cache[model_path]["mymodel"] = load_model(model_path)
+    model_cache[model_path]["mymodel"].layers[-1].activation=tf.keras.activations.linear
+    model_cache[model_path]["mymodel"].save('tmp_wo_softmax.hdf5')
     model_wo_softmax = load_model('tmp_wo_softmax.hdf5')
     os.remove('tmp_wo_softmax.hdf5')
     print("model_wo_softmax loaded.")
     print('Creating analyzer...')
     # create analyzer -> only one selected here!
     for method in methods:
-        model_dict[model_path]["analyzer"] = innvestigate.create_analyzer(method[0], model_wo_softmax, **method[1])
+        model_cache[model_path]["analyzer"] = innvestigate.create_analyzer(method[0], model_wo_softmax, **method[1])
     print('Analyzer created.')
+    return (model_cache[model_path]["mymodel"], model_cache[model_path]["analyzer"])
+    
+
+# Preload CNN models from disk:
+if do_model_prefetch:
+    print("Preloading all " + str(len(stored_models)) + " models. This may take a while...")
+    for model_path in stored_models:
+        load_model_from_disk_into_cache(model_path)
+
+    
+    
 # load atlas nifti data:
 img = nib.load('aal/aal.nii')
 img_drawn = nib.load('aal/canny_regions_by_border.nii.gz')
@@ -213,14 +215,18 @@ def get_region_name(axi, sag, cor):
 class Model():
     
     def set_model(self, new_model_name):
+        global model_cache
         if debug: print("Called set_model().")
         
-        global methods
         self.selected_model = new_model_name
-        self.mymodel = model_dict[self.selected_model]["mymodel"]
-        #model_wo_softmax = model_dict[selected_model]["model_wo_softmax"]
-        self.analyzer = model_dict[self.selected_model]["analyzer"]
-        print('Model loaded.')
+        try:
+            self.mymodel = model_cache[self.selected_model]["mymodel"]
+            self.analyzer = model_cache[self.selected_model]["analyzer"]
+            if(debug): print("Model loaded from cache.")
+        except KeyError:
+            (self.mymodel, self.analyzer) = load_model_from_disk_into_cache(self.selected_model)
+            if(debug): print("Model loaded from disk.")
+
     
         # callback for a new subject being selected
     def set_subject(self, subj_id):
@@ -253,10 +259,9 @@ class Model():
         
     def __init__(self):
         if debug: print("Initializing new datamodel object...")
-        #load selected model data from dictionary:
-        self.mymodel = model_dict[selected_model]["mymodel"]
-        #model_wo_softmax = model_dict[selected_model]["model_wo_softmax"]
-        self.analyzer = model_dict[selected_model]["analyzer"]
+        #load selected model data from cache or disk:
+        self.set_model(selected_model)
+
 
         # Call once to initialize first image and variables
         self.set_subject(index_lst[0]) # invoke with first subject

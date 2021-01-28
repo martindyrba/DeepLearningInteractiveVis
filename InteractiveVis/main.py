@@ -125,13 +125,19 @@ def select_subject_callback(attr, old, new):
     
 
 
+def select_model_worker():
+    if debug: print("Called select_model_worker().")
+    # Might take a long time if model is not cached yet.
+    m.set_model(v.model_select.value)
+    print("Finished selecting new model.")
+    v.curdoc().add_next_tick_callback(select_subject_worker)
+
 def select_model_callback(attr, old, new):
     v.disable_widgets()
 
     if debug: print("Called select_model_callback().")
-    m.set_model(v.model_select.value)
-    v.curdoc().add_next_tick_callback(select_subject_worker)
-    print("Finished selecting new model.")
+    v.curdoc().add_next_tick_callback(select_model_worker)
+
     
 
 
