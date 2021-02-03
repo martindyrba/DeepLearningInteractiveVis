@@ -10,7 +10,6 @@ import sys
 
 
 
-
 def click_frontal_callback(event):
     if debug: print("Called click_frontal_callback().")
     global dontplot #helper variable to not plot the same image twice
@@ -99,6 +98,7 @@ def select_subject_worker():
     v.p_frontal.title.text = "Scan predicted as %0.2f%% Alzheimer\'s" % m.pred
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
+    v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold = v.threshold_slider.value, cluster_size = v.clustersize_slider.value)
 
     v.update_guide_frontal()
@@ -123,8 +123,6 @@ def select_subject_callback(attr, old, new):
         v.curdoc().add_next_tick_callback(select_subject_worker)
             
     
-
-
 def select_model_worker():
     if debug: print("Called select_model_worker().")
     # Might take a long time if model is not cached yet.
@@ -154,7 +152,7 @@ def apply_thresholds_callback(attr, old, new):
 
 def set_slice_frontal_callback(attr, old, new):
     if debug: print("Called set_slice_frontal_callback().")
-
+    
     v.axial_crosshair_from_frontal.update(location = v.slice_slider_frontal.end - new +1)
     v.sagittal_crosshair_from_frontal.update(location = new -1)
     v.update_region_div()
@@ -193,20 +191,16 @@ def set_slice_sagittal_callback(attr, old, new):
 
 def set_transparency_callback(attr, old, new):
     if debug: print("Called set_transparency_callback().")
+    v.render_overlay()
     v.plot_frontal()
     v.plot_axial()
     v.plot_sagittal()
 
 def click_show_regions_callback(attr):
     if debug: print("Called click_show_regions_callback().")
-    if(v.toggle_regions.active):
-        v.plot_frontal_region()
-        v.plot_axial_region()
-        v.plot_sagittal_region()
-    else:
-        v.plot_frontal()
-        v.plot_axial()
-        v.plot_sagittal()
+    v.plot_frontal()
+    v.plot_axial()
+    v.plot_sagittal()
 
 dontplot = False
 m = Model() #construct new datamodel object for storing selected subject/cnn model per session
