@@ -25,10 +25,10 @@ jet_color_palette = []
 for i in range(0 , 256):
     jet_color_palette.append(rgb2hex(cm.jet(i)))
 
+
 class View():
     
     def update_region_div(self):
-        #global selected_region, region_ID
         self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.region_div.update(text="Region: " + self.selected_region)
@@ -57,10 +57,10 @@ class View():
         self.tiv_div.update(text="TIV: %.0f cm³" % tiv.iloc[cov_idx[subj_id]])
 
 
-    def apply_thresholds(self, map, threshold = 0.5, cluster_size = 20):
+    def apply_thresholds(self, relevance_map, threshold = 0.5, cluster_size = 20):
         if debug: print("Called apply_thresholds().")
         global clust_sizes, clust_labelimg, clust_sizes_drawn, clust_mean_intensities, clust_peak_intensities # define global variables to store subject data
-        self.overlay = np.copy(map)
+        self.overlay = np.copy(relevance_map)
         self.overlay[np.abs(self.overlay) < threshold] = 0 # completely hide low values
         # cluster_size filtering
         labelimg = np.copy(self.overlay)
@@ -94,37 +94,51 @@ class View():
         self.sum_neg_frontal = np.sum(tmp, axis=(0,1)) # sum of neg relevance in slices
         self.sum_neg_axial = np.sum(tmp, axis=(2,1))
         self.sum_neg_sagittal = np.sum(tmp, axis=(2,0))
+        self.render_overlay()
         return self.overlay # result also stored in object variables: self.overlay, self.sum_pos*, self.sum_neg*
 
-    def bg2RGBA(self, bg):
+    @staticmethod
+    def bg2RGBA(bg):
+        if(debug): print("Called bg2RGBA().")
+        
         img = bg/4 + 0.25 # rescale to range of approx. 0..1 float
         img = np.uint8(cm.gray(img) * 255)
-        ret = img.view("uint32").reshape(img.shape[:2]) # convert to 3D array of uint32
+        ret = img.view("uint32").reshape(img.shape[:3]) # convert to 3D array of uint32
         return ret
 
-    def overlay2RGBA(self, map, alpha = 0.5):
+    @staticmethod
+    def overlay2RGBA(relevance_map, alpha = 0.5):
+        if(debug): print("Called overlay2RGBA().")
         # assume map to be in range of -1..1 with 0 for hidden content
-        alpha_mask = np.copy(map)
+        alpha_mask = np.copy(relevance_map)
         alpha_mask[np.abs(alpha_mask) > 0] = alpha # final transparency of visible content
-        map = map/2 + 0.5 # range 0-1 float
-        ovl = np.uint8(cm.jet(map) * 255) # cm translates range 0 - 255 uint to rgba array
-        ovl[:,:,3] = np.uint8(alpha_mask * 255) # replace alpha channel (fourth dim) with calculated values
-        ret = ovl.view("uint32").reshape(ovl.shape[:2]) # convert to 3D array of uint32
+        relevance_map = relevance_map/2 + 0.5 # range 0-1 float
+        ovl = np.uint8(cm.jet(relevance_map) * 255) # cm translates range 0 - 255 uint to rgba array
+        ovl[:,:,:,3] = np.uint8(alpha_mask * 255) # replace alpha channel (fourth dim) with calculated values
+        ret = ovl.view("uint32").reshape(ovl.shape[:3]) # convert to 3D array of uint32
         return ret
 
-    def region2RGBA(self, rg, alpha = 0.5):
+    @staticmethod
+    def region2RGBA(rg, region_ID, alpha = 0.5):
+        # Other than overlay2RBGA() and bg2RGBA(), this method takes a 2D array 
+        # as input instead of a 3D array. That is because it is not useful to preprocess the 
+        # entire 3D region outline layer, which would have to be redone every time the crosshair
+        # is pointing at another region.
         rgcopy = np.copy(rg)
-        if self.region_ID != 0:
-            rgcopy[rgcopy != self.region_ID] = 0
-            rgcopy[rgcopy == self.region_ID] = 1
+        if region_ID != 0:
+            rgcopy[rgcopy != region_ID] = 0
+            rgcopy[rgcopy == region_ID] = 1
         else: #crosshair on background
             rgcopy[True] = 0
         alpha_mask = np.copy(rgcopy)
         alpha_mask[alpha_mask == 1] = alpha
         img = np.uint8(cm.autumn(rgcopy)* 255)
         img[:,:,3] = np.uint8(alpha_mask * 255 )
-        ret = img.view("uint32").reshape(img.shape[:2]) # convert to 3D array of uint32
+        ret = img.view("uint32").reshape(img.shape[:2]) # convert to 2D array of uint32
         return ret
+    
+    def render_overlay(self):
+        self.rendered_overlay = View.overlay2RGBA(self.overlay, alpha=1-self.transparency_slider.value)
 
     def update_guide_frontal(self):
             x = np.arange(0, self.sum_neg_frontal.shape[0])
@@ -196,60 +210,63 @@ class View():
             self.hist_sagittal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
 
 
-    def plot_frontal(self):
-        if debug: print("Called plot_frontal().")
-        bg = self.m.subj_bg[:,:,self.slice_slider_frontal.value-1]
-        bg = self.bg2RGBA(bg)
-        bg = np.flipud(bg)
-        ovl = self.overlay[:,:,self.slice_slider_frontal.value-1]
-        ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
-        ovl = np.flipud(ovl)
-        self.p_frontal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
-        if (self.toggle_regions.active):
-            self.plot_frontal_region()
+    def render_backround(self):
+        if(debug): print("Called render_background().")
+        self.bg = View.bg2RGBA(self.m.subj_bg)
 
-    def plot_frontal_region(self):
-        if debug: print("Called plot_frontal_region().")
-        rg = aal_drawn[:,:,self.slice_slider_frontal.value-1] #rg = region
-        rg = self.region2RGBA(rg)
-        self.p_frontal.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0], level='glyph') #for bokeh render levels see Readme
+
+    def plot_frontal(self):
+        
+        if debug: print("Called plot_frontal().")
+        
+        bg = self.bg[:,:,self.slice_slider_frontal.value-1]
+        bg = np.flipud(bg)
+        ovl = self.rendered_overlay[:,:,self.slice_slider_frontal.value-1]
+        ovl = np.flipud(ovl)
+        
+        if (self.toggle_regions.active):
+            rg = aal_drawn[:,:,self.slice_slider_frontal.value-1] #rg = region
+            rg = View.region2RGBA(rg, self.region_ID)
+            
+            # This bokeh function call takes > 100ms, so we approve potentially redundant plotting of background 
+            # and overlay if only the region outline would have changed. The other preparation of plotted arrays
+            # above this line does not really matter performance wise (e.g. region2RGBA() takes ~1ms per slice).
+            self.p_frontal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
+        else:
+            self.p_frontal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+
 
     def plot_axial(self):
         if debug: print("Called plot_axial().")
-        bg = self.m.subj_bg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
-        bg = self.bg2RGBA(bg)
+        
+        bg = self.bg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
         bg = np.rot90(bg)
-        ovl = self.overlay[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
-        ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
+        ovl = self.rendered_overlay[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]
         ovl = np.rot90(ovl)
-        self.p_axial.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
+        
         if (self.toggle_regions.active):
-            self.plot_axial_region()
+            rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
+            rg = View.region2RGBA(rg, self.region_ID)
+            rg = np.rot90(rg)
+            self.p_axial.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
+        else:
+            self.p_axial.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
 
-    def plot_axial_region(self):
-        if debug: print("Called plot_axial_region().")
-        rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
-        rg = self.region2RGBA(rg)
-        rg = np.rot90(rg)
-        self.p_axial.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0],  level='glyph')
 
     def plot_sagittal(self):
         if debug: print("Called plot_sagittal().")
-        bg = self.m.subj_bg[:,self.slice_slider_sagittal.value-1,:]
-        bg = self.bg2RGBA(bg)
+        
+        bg = self.bg[:,self.slice_slider_sagittal.value-1,:]
         bg = np.flipud(bg)
-        ovl = self.overlay[:,self.slice_slider_sagittal.value-1,:]
-        ovl = self.overlay2RGBA(ovl, alpha=1-self.transparency_slider.value)
+        ovl = self.rendered_overlay[:,self.slice_slider_sagittal.value-1,:]
         ovl = np.flipud(ovl)
-        self.p_sagittal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+        
         if (self.toggle_regions.active):
-            self.plot_sagittal_region()
-
-    def plot_sagittal_region(self):
-        if debug: print("Called plot_sagittal_region().")
-        rg = aal_drawn[:,self.slice_slider_sagittal.value-1,:] #rg = region
-        rg = self.region2RGBA(rg)
-        self.p_sagittal.image_rgba(image=[rg], x=[0], y=[0], dw=rg.shape[1], dh=rg.shape[0],  level='glyph')
+            rg = aal_drawn[:,self.slice_slider_sagittal.value-1,:] #rg = region
+            rg = View.region2RGBA(rg, self.region_ID)
+            self.p_sagittal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
+        else:
+            self.p_sagittal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
 
 
     def disable_widgets(self):
@@ -410,6 +427,8 @@ class View():
                          level='overlay', visible=False)
 
         self.p_axial.add_layout(self.loading_label)
+        
+        self.render_backround()
 
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
