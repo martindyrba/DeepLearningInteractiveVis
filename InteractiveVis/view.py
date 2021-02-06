@@ -18,7 +18,7 @@ from skimage.measure import label, regionprops
 from config import scale_factor
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_ID, aal_drawn, age, cov_idx, sex, tiv
-from config import debug
+from config import debug, flip_left_right_in_frontal_plot
 
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
 jet_color_palette = []
@@ -364,11 +364,11 @@ class View():
         self.p_frontal.x_range.range_padding = 0
         self.p_frontal.y_range.range_padding = 0
         
-        self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200, active=False)
+        self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200, active=flip_left_right_in_frontal_plot)
         
         self.orientation_label_shown_left = Label(
-                         text='L', render_mode='css',
-                         x = 3,
+                         text='R' if flip_left_right_in_frontal_plot else 'L',
+                         render_mode='css', x = 3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='left', text_color='white',
                          text_font_size='20px',
@@ -376,7 +376,8 @@ class View():
                          background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
         self.orientation_label_shown_right = Label(
-                         text='R', render_mode='css',
+                         text='L' if flip_left_right_in_frontal_plot else 'R',
+                         render_mode='css',
                          x = self.m.subj_bg.shape[1]-3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='right', text_color='white',
