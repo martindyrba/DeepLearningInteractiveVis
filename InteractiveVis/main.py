@@ -30,7 +30,7 @@ def click_frontal_callback(event):
         y = int(event.y)
 
     dontplot = True
-    v.slice_slider_sagittal.update(value = x)
+    v.slice_slider_sagittal.update(value = v.slice_slider_sagittal.end-x if v.flip_frontal_view.active else x)
     dontplot = False
     v.slice_slider_axial.update(value = y)
     if not v.toggle_regions.active: v.plot_sagittal()
@@ -179,7 +179,7 @@ def set_slice_axial_callback(attr, old, new):
 def set_slice_sagittal_callback(attr, old, new):
     if debug: print("Called set_slice_sagittal_callback().")
 
-    v.frontal_crosshair_from_sagittal.update(location=(new -1))
+    v.frontal_crosshair_from_sagittal.update(location=v.slice_slider_sagittal.end - (new -1) if v.flip_frontal_view.active else (new-1))
     v.axial_crosshair_from_sagittal.update(location=(new -1))
     v.update_region_div()
     v.update_cluster_divs()
@@ -201,6 +201,14 @@ def click_show_regions_callback(attr):
     v.plot_frontal()
     v.plot_axial()
     v.plot_sagittal()
+
+def flip_frontal_callback(attr):
+    if debug: print("Called flip_frontal_callback().")
+    v.orientation_label_shown_left.update(text="R" if v.flip_frontal_view.active else "L")
+    v.orientation_label_shown_right.update(text="L" if v.flip_frontal_view.active else "R")
+    v.frontal_crosshair_from_sagittal.update(location=v.slice_slider_sagittal.end - (v.slice_slider_sagittal.value -1) if v.flip_frontal_view.active else (v.slice_slider_sagittal.value-1))
+    v.plot_frontal()
+    v.update_guide_frontal()
 
 dontplot = False
 m = Model() #construct new datamodel object for storing selected subject/cnn model per session
@@ -229,6 +237,7 @@ v.firstrun = False
 v.slice_slider_frontal.on_change('value', set_slice_frontal_callback)
 v.slice_slider_axial.on_change('value', set_slice_axial_callback)
 v.slice_slider_sagittal.on_change('value', set_slice_sagittal_callback)
+v.flip_frontal_view.on_click(flip_frontal_callback)
 v.threshold_slider.on_change('value', apply_thresholds_callback)
 v.clustersize_slider.on_change('value', apply_thresholds_callback)
 v.transparency_slider.on_change('value', set_transparency_callback)

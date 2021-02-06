@@ -142,6 +142,7 @@ class View():
 
     def update_guide_frontal(self):
             x = np.arange(0, self.sum_neg_frontal.shape[0])
+            if (self.flip_frontal_view.active): x = np.flip(x)
             y0 = np.zeros(x.shape, dtype=int)
             if self.firstrun:
                 # initialize/create plots
@@ -216,7 +217,6 @@ class View():
 
 
     def plot_frontal(self):
-        
         if debug: print("Called plot_frontal().")
         
         bg = self.bg[:,:,self.slice_slider_frontal.value-1]
@@ -231,9 +231,9 @@ class View():
             # This bokeh function call takes > 100ms, so we approve potentially redundant plotting of background 
             # and overlay if only the region outline would have changed. The other preparation of plotted arrays
             # above this line does not really matter performance wise (e.g. region2RGBA() takes ~1ms per slice).
-            self.p_frontal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
+            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
         else:
-            self.p_frontal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
 
 
     def plot_axial(self):
@@ -282,6 +282,7 @@ class View():
         self.clustersize_slider.update(disabled=True)
         self.transparency_slider.update(disabled=True)
         self.toggle_regions.update(disabled=True)
+        self.flip_frontal_view.update(disabled=True)
         
 
     def enable_widgets(self):
@@ -296,6 +297,7 @@ class View():
         self.clustersize_slider.update(disabled=False)
         self.transparency_slider.update(disabled=False)
         self.toggle_regions.update(disabled=False)
+        self.flip_frontal_view.update(disabled=False)
         self.loading_label.update(visible=False)
         
     
@@ -362,12 +364,14 @@ class View():
         self.p_frontal.x_range.range_padding = 0
         self.p_frontal.y_range.range_padding = 0
         
+        self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200, active=False)
+        
         self.orientation_label_shown_left = Label(
                          text='L', render_mode='css',
                          x = 3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='left', text_color='white',
-                         text_font_size='20px', #text_font_style='italic',
+                         text_font_size='20px',
                          border_line_color='white', border_line_alpha=0,
                          background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
@@ -376,7 +380,7 @@ class View():
                          x = self.m.subj_bg.shape[1]-3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='right', text_color='white',
-                         text_font_size='20px', #text_font_style='italic',
+                         text_font_size='20px',
                          border_line_color='white', border_line_alpha=0,
                          background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
@@ -471,7 +475,7 @@ class View():
                         column(
                             row(self.age_div, self.sex_div, self.tiv_div, css_classes=["subject_divs"]),
                             row(
-                                column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal),
+                                column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
                                 column(self.p_axial, self.slice_slider_axial, self.guide_axial),
                                 column(self.p_sagittal, self.slice_slider_sagittal, self.guide_sagittal),
                                 column(self.p_color_bar)
