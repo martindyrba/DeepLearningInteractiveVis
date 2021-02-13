@@ -5,7 +5,7 @@
 from config import debug
 from datamodel import index_lst, sorted_xs, Model
 import view
-from bokeh.events import Tap
+from bokeh.events import Tap, Pan
 import sys
 import numpy as np
 
@@ -218,8 +218,11 @@ m = Model() #construct new datamodel object for storing selected subject/cnn mod
 v = view.View(m) #construct new View object for every session since bokeh models (i.e. sliders, figures, ...) cannot be shared across client sessions
 
 v.p_frontal.on_event(Tap, click_frontal_callback)
+v.p_frontal.on_event(Pan, click_frontal_callback)
 v.p_axial.on_event(Tap, click_axial_callback)
+v.p_axial.on_event(Pan, click_axial_callback)
 v.p_sagittal.on_event(Tap, click_sagittal_callback)
+v.p_sagittal.on_event(Pan, click_sagittal_callback)
 
 
 
