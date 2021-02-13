@@ -18,6 +18,7 @@ stored_models = sorted(glob.glob(os.path.join(model_folder, 'newmodel_wb_cv[1-9]
 #stored_models = sorted(glob.glob('newmodel/newmodel_wb_cv*.hdf5')) #get all models in subfolder, sorting still messed up
 selected_model = os.path.join(model_folder, 'newmodel_wb_cv16.hdf5') # model file name to load (default cv8 like before)
 do_model_prefetch = True
+flip_left_right_in_frontal_plot = False
 
 #define path/name to pickle file containing covariates
 covariates_file = 'covariates.pkl'

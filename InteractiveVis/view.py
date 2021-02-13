@@ -18,7 +18,7 @@ from skimage.measure import label, regionprops
 from config import scale_factor
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_ID, aal_drawn, age, cov_idx, sex, tiv
-from config import debug
+from config import debug, flip_left_right_in_frontal_plot
 
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
 jet_color_palette = []
@@ -29,12 +29,12 @@ for i in range(0 , 256):
 class View():
     
     def update_region_div(self):
-        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
-        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.region_div.update(text="Region: " + self.selected_region)
 
     def update_cluster_divs(self):
-        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
+        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
         if cluster_index == 0:
             self.cluster_size_div.update(text="Cluster Size: " + "N/A")
             self.cluster_mean_div.update(text="Mean Intensity: " + "N/A")
@@ -189,6 +189,7 @@ class View():
             
     def update_guide_sagittal(self):
         x = np.arange(0, self.sum_neg_sagittal.shape[0])
+        if (self.flip_frontal_view.active): x = np.flip(x)
         y0 = np.zeros(x.shape, dtype=int)
         if self.firstrun:
             # initialize/create plots
@@ -216,7 +217,6 @@ class View():
 
 
     def plot_frontal(self):
-        
         if debug: print("Called plot_frontal().")
         
         bg = self.bg[:,:,self.slice_slider_frontal.value-1]
@@ -231,9 +231,9 @@ class View():
             # This bokeh function call takes > 100ms, so we approve potentially redundant plotting of background 
             # and overlay if only the region outline would have changed. The other preparation of plotted arrays
             # above this line does not really matter performance wise (e.g. region2RGBA() takes ~1ms per slice).
-            self.p_frontal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
+            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
         else:
-            self.p_frontal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
 
 
     def plot_axial(self):
@@ -248,21 +248,21 @@ class View():
             rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
             rg = np.rot90(rg)
-            self.p_axial.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
+            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
-            self.p_axial.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
+            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
 
 
     def plot_sagittal(self):
         if debug: print("Called plot_sagittal().")
         
-        bg = self.bg[:,self.slice_slider_sagittal.value-1,:]
+        bg = self.bg[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:]
         bg = np.flipud(bg)
-        ovl = self.rendered_overlay[:,self.slice_slider_sagittal.value-1,:]
+        ovl = self.rendered_overlay[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:]
         ovl = np.flipud(ovl)
         
         if (self.toggle_regions.active):
-            rg = aal_drawn[:,self.slice_slider_sagittal.value-1,:] #rg = region
+            rg = aal_drawn[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
             self.p_sagittal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
@@ -282,6 +282,7 @@ class View():
         self.clustersize_slider.update(disabled=True)
         self.transparency_slider.update(disabled=True)
         self.toggle_regions.update(disabled=True)
+        self.flip_frontal_view.update(disabled=True)
         
 
     def enable_widgets(self):
@@ -296,6 +297,7 @@ class View():
         self.clustersize_slider.update(disabled=False)
         self.transparency_slider.update(disabled=False)
         self.toggle_regions.update(disabled=False)
+        self.flip_frontal_view.update(disabled=False)
         self.loading_label.update(visible=False)
         
     
@@ -362,21 +364,24 @@ class View():
         self.p_frontal.x_range.range_padding = 0
         self.p_frontal.y_range.range_padding = 0
         
+        self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200, active=flip_left_right_in_frontal_plot)
+        
         self.orientation_label_shown_left = Label(
-                         text='L', render_mode='css',
-                         x = 3,
+                         text='R' if flip_left_right_in_frontal_plot else 'L',
+                         render_mode='css', x = 3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='left', text_color='white',
-                         text_font_size='20px', #text_font_style='italic',
+                         text_font_size='20px',
                          border_line_color='white', border_line_alpha=0,
                          background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
         self.orientation_label_shown_right = Label(
-                         text='R', render_mode='css',
+                         text='L' if flip_left_right_in_frontal_plot else 'R',
+                         render_mode='css',
                          x = self.m.subj_bg.shape[1]-3,
                          y = self.m.subj_bg.shape[0]-13,
                          text_align='right', text_color='white',
-                         text_font_size='20px', #text_font_style='italic',
+                         text_font_size='20px',
                          border_line_color='white', border_line_alpha=0,
                          background_fill_color='black', background_fill_alpha=0,
                          level='overlay', visible=True)
@@ -432,8 +437,8 @@ class View():
 
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
-        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
-        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.region_div = Div(text="Region: "+self.selected_region, sizing_mode="stretch_both", css_classes=["region_divs"])
         
         self.cluster_size_div = Div(text="Cluster Size: " + "0", css_classes=["cluster_divs"]) #initialize with 0 because clust_labelimg does not exist yet
@@ -471,7 +476,7 @@ class View():
                         column(
                             row(self.age_div, self.sex_div, self.tiv_div, css_classes=["subject_divs"]),
                             row(
-                                column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal),
+                                column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
                                 column(self.p_axial, self.slice_slider_axial, self.guide_axial),
                                 column(self.p_sagittal, self.slice_slider_sagittal, self.guide_sagittal),
                                 column(self.p_color_bar)
