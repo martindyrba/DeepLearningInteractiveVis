@@ -7,6 +7,7 @@ from datamodel import index_lst, sorted_xs, Model
 import view
 from bokeh.events import Tap
 import sys
+import numpy as np
 
 
 
@@ -30,7 +31,7 @@ def click_frontal_callback(event):
         y = int(event.y)
 
     dontplot = True
-    v.slice_slider_sagittal.update(value = v.slice_slider_sagittal.end-x if v.flip_frontal_view.active else x)
+    v.slice_slider_sagittal.update(value = x)
     dontplot = False
     v.slice_slider_axial.update(value = y)
     if not v.toggle_regions.active: v.plot_sagittal()
@@ -179,8 +180,8 @@ def set_slice_axial_callback(attr, old, new):
 def set_slice_sagittal_callback(attr, old, new):
     if debug: print("Called set_slice_sagittal_callback().")
 
-    v.frontal_crosshair_from_sagittal.update(location=v.slice_slider_sagittal.end - (new -1) if v.flip_frontal_view.active else (new-1))
-    v.axial_crosshair_from_sagittal.update(location=(new -1))
+    v.frontal_crosshair_from_sagittal.update(location= new -1 )
+    v.axial_crosshair_from_sagittal.update(location= new -1 )
     v.update_region_div()
     v.update_cluster_divs()
     if not dontplot:
@@ -206,9 +207,11 @@ def flip_frontal_callback(attr):
     if debug: print("Called flip_frontal_callback().")
     v.orientation_label_shown_left.update(text="R" if v.flip_frontal_view.active else "L")
     v.orientation_label_shown_right.update(text="L" if v.flip_frontal_view.active else "R")
-    v.frontal_crosshair_from_sagittal.update(location=v.slice_slider_sagittal.end - (v.slice_slider_sagittal.value -1) if v.flip_frontal_view.active else (v.slice_slider_sagittal.value-1))
+    v.update_region_div()
+    v.slice_slider_sagittal.update(value = np.abs(v.slice_slider_sagittal.end - v.slice_slider_sagittal.value) +1 )
     v.plot_frontal()
-    v.update_guide_frontal()
+    v.plot_axial()
+    v.update_guide_sagittal()
 
 dontplot = False
 m = Model() #construct new datamodel object for storing selected subject/cnn model per session

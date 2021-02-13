@@ -29,12 +29,12 @@ for i in range(0 , 256):
 class View():
     
     def update_region_div(self):
-        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
-        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.region_div.update(text="Region: " + self.selected_region)
 
     def update_cluster_divs(self):
-        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
+        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
         if cluster_index == 0:
             self.cluster_size_div.update(text="Cluster Size: " + "N/A")
             self.cluster_mean_div.update(text="Mean Intensity: " + "N/A")
@@ -142,7 +142,6 @@ class View():
 
     def update_guide_frontal(self):
             x = np.arange(0, self.sum_neg_frontal.shape[0])
-            if (self.flip_frontal_view.active): x = np.flip(x)
             y0 = np.zeros(x.shape, dtype=int)
             if self.firstrun:
                 # initialize/create plots
@@ -190,6 +189,7 @@ class View():
             
     def update_guide_sagittal(self):
         x = np.arange(0, self.sum_neg_sagittal.shape[0])
+        if (self.flip_frontal_view.active): x = np.flip(x)
         y0 = np.zeros(x.shape, dtype=int)
         if self.firstrun:
             # initialize/create plots
@@ -248,21 +248,21 @@ class View():
             rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
             rg = np.rot90(rg)
-            self.p_axial.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
+            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
-            self.p_axial.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
+            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
 
 
     def plot_sagittal(self):
         if debug: print("Called plot_sagittal().")
         
-        bg = self.bg[:,self.slice_slider_sagittal.value-1,:]
+        bg = self.bg[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:]
         bg = np.flipud(bg)
-        ovl = self.rendered_overlay[:,self.slice_slider_sagittal.value-1,:]
+        ovl = self.rendered_overlay[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:]
         ovl = np.flipud(ovl)
         
         if (self.toggle_regions.active):
-            rg = aal_drawn[:,self.slice_slider_sagittal.value-1,:] #rg = region
+            rg = aal_drawn[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
             self.p_sagittal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
@@ -437,8 +437,8 @@ class View():
 
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
-        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
-        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.region_ID = get_region_ID(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
+        self.selected_region = get_region_name(self.slice_slider_axial.value-1, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value  if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1)
         self.region_div = Div(text="Region: "+self.selected_region, sizing_mode="stretch_both", css_classes=["region_divs"])
         
         self.cluster_size_div = Div(text="Cluster Size: " + "0", css_classes=["cluster_divs"]) #initialize with 0 because clust_labelimg does not exist yet
