@@ -34,15 +34,15 @@ class View():
         self.region_div.update(text="Region: " + self.selected_region)
 
     def update_cluster_divs(self):
-        cluster_index = clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
-        if cluster_index == 0:
+        self.cluster_index = self.clust_labelimg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1, self.slice_slider_frontal.value-1]
+        if self.cluster_index == 0:
             self.cluster_size_div.update(text="Cluster Size: " + "N/A")
             self.cluster_mean_div.update(text="Mean Intensity: " + "N/A")
             self.cluster_peak_div.update(text="Peak Intensity: " + "N/A")
         else:
-            self.cluster_size_div.update(text="Cluster Size: " + str(clust_sizes_drawn[cluster_index]) + " vx = " + str(format(clust_sizes_drawn[cluster_index]*3.375, '.0f')) + " mm³")
-            self.cluster_mean_div.update(text="Mean Intensity: " + str(format(clust_mean_intensities[cluster_index], '.2f')))
-            self.cluster_peak_div.update(text="Peak Intensity: " + str(format(clust_peak_intensities[cluster_index], '.2f')))
+            self.cluster_size_div.update(text="Cluster Size: " + str(self.clust_sizes_drawn[self.cluster_index]) + " vx = " + str(format(self.clust_sizes_drawn[self.cluster_index]*3.375, '.0f')) + " mm³")
+            self.cluster_mean_div.update(text="Mean Intensity: " + str(format(self.clust_mean_intensities[self.cluster_index], '.2f')))
+            self.cluster_peak_div.update(text="Peak Intensity: " + str(format(self.clust_peak_intensities[self.cluster_index], '.2f')))
 
     def update_subject_divs(self, subj_id):
         if debug: print("Called update_subject_divs().")
@@ -59,7 +59,6 @@ class View():
 
     def apply_thresholds(self, relevance_map, threshold = 0.5, cluster_size = 20):
         if debug: print("Called apply_thresholds().")
-        global clust_sizes, clust_labelimg, clust_sizes_drawn, clust_mean_intensities, clust_peak_intensities # define global variables to store subject data
         self.overlay = np.copy(relevance_map)
         self.overlay[np.abs(self.overlay) < threshold] = 0 # completely hide low values
         # cluster_size filtering
@@ -67,21 +66,21 @@ class View():
         labelimg[labelimg>0] = 1 # binarize img
         labelimg = label(labelimg, connectivity=2)
         lprops = regionprops(labelimg, intensity_image=self.overlay)
-        clust_sizes = []
-        clust_sizes_drawn = np.zeros(len(lprops)+1, dtype=np.uint32) #just those that show up in the end on canvas
-        clust_mean_intensities = np.zeros(len(lprops)+1, dtype=np.float64)
-        clust_peak_intensities = np.zeros(len(lprops)+1, dtype=np.float64)
+        self.clust_sizes = []
+        self.clust_sizes_drawn = np.zeros(len(lprops)+1, dtype=np.uint32) #just those that show up in the end on canvas
+        self.clust_mean_intensities = np.zeros(len(lprops)+1, dtype=np.float64)
+        self.clust_peak_intensities = np.zeros(len(lprops)+1, dtype=np.float64)
         for lab in lprops:
-            clust_sizes.append(lab.area)
-            clust_sizes_drawn[lab.label]=lab.area
-            clust_mean_intensities[lab.label]=lab.mean_intensity
-            clust_peak_intensities[lab.label]=lab.max_intensity
+            self.clust_sizes.append(lab.area)
+            self.clust_sizes_drawn[lab.label]=lab.area
+            self.clust_mean_intensities[lab.label]=lab.mean_intensity
+            self.clust_peak_intensities[lab.label]=lab.max_intensity
             if lab.area<cluster_size:
                 labelimg[labelimg==lab.label] = 0 # remove small clusters
-                clust_sizes_drawn[lab.label] = 0
-                clust_mean_intensities[lab.label] = 0
-                clust_peak_intensities[lab.label] = 0
-        clust_labelimg = np.copy(labelimg)
+                self.clust_sizes_drawn[lab.label] = 0
+                self.clust_mean_intensities[lab.label] = 0
+                self.clust_peak_intensities[lab.label] = 0
+        self.clust_labelimg = np.copy(labelimg)
         labelimg[labelimg>0] = 1 # create binary mask
         np.multiply(self.overlay, labelimg, out=self.overlay)
         tmp = np.copy(self.overlay)
@@ -151,7 +150,7 @@ class View():
                 self.neg_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_neg_frontal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_frontal")
                 self.neg_line_frontal = self.guide_frontal.line(x, y=self.sum_neg_frontal, line_width=2, color="#36689b", name="neg_line_frontal")
                 # calc histogram; clip high values to slider max (=200)
-                [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+                [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
                 self.hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_frontal")
                 #firstrun_frontal = False
             else: # update plots
@@ -159,7 +158,7 @@ class View():
                 self.pos_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
                 self.neg_area_frontal.data_source.data = {'x':x, 'y1':self.sum_neg_frontal, 'y2':y0}
                 self.neg_line_frontal.data_source.data = {'x':x, 'y':self.sum_neg_frontal}
-                [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+                [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
                 self.hist_frontal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
                 
 
@@ -175,7 +174,7 @@ class View():
             self.neg_area_axial = self.guide_axial.varea(x=x, y1=self.sum_neg_axial, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_axial")
             self.neg_line_axial = self.guide_axial.line(x, y=self.sum_neg_axial, line_width=2, color="#36689b", name="neg_line_axial")
             # calc histogram; clip high values to slider max (=200)
-            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_axial = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_axial")
             #firstrun_axial = False
         else: # update plots
@@ -183,7 +182,7 @@ class View():
             self.pos_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
             self.neg_area_axial.data_source.data = {'x':x, 'y1':self.sum_neg_axial, 'y2':y0}
             self.neg_line_axial.data_source.data = {'x':x, 'y':self.sum_neg_axial}
-            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_axial.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
 
             
@@ -199,7 +198,7 @@ class View():
             self.neg_area_sagittal = self.guide_sagittal.varea(x=x, y1=self.sum_neg_sagittal, y2=y0, fill_color ="#36689b", fill_alpha =0.8, name="neg_area_sagittal")
             self.neg_line_sagittal = self.guide_sagittal.line(x, y=self.sum_neg_sagittal, line_width=2, color="#36689b", name="neg_line_sagittal")
             # calc histogram; clip high values to slider max (=200)
-            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_sagittal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat, left=edges[:-1], right=edges[1:], fill_color="blue", line_color="blue", name="hist_sagittal")
             #firstrun_sagittal = False
         else: # update plots
@@ -207,7 +206,7 @@ class View():
             self.pos_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
             self.neg_area_sagittal.data_source.data = {'x':x, 'y1':self.sum_neg_sagittal, 'y2':y0}
             self.neg_line_sagittal.data_source.data = {'x':x, 'y':self.sum_neg_sagittal}
-            [histdat,edges] = np.histogram(np.clip(clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            [histdat,edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
             self.hist_sagittal.data_source.data = {'bottom':np.zeros(histdat.shape, dtype=int), 'top':histdat, 'left':edges[:-1], 'right':edges[1:]}
 
 
