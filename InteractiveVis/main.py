@@ -21,20 +21,21 @@ def click_frontal_callback(event):
     elif event.x > v.slice_slider_sagittal.end:
         x = v.slice_slider_sagittal.end
     else:
-        x = int(event.x)
+        x = int(round(event.x))
 
     if event.y<1:
         y = 1
     elif event.y > v.slice_slider_axial.end:
         y = v.slice_slider_axial.end
     else:
-        y = int(event.y)
+        y = int(round(event.y))
 
     dontplot = True
     v.slice_slider_sagittal.update(value = x)
     dontplot = False
     v.slice_slider_axial.update(value = y)
     if not v.toggle_regions.active: v.plot_sagittal()
+
 
 def click_axial_callback(event):
     if debug: print("Called click_axial_callback().")
@@ -46,20 +47,21 @@ def click_axial_callback(event):
     elif event.x > v.slice_slider_sagittal.end:
         x = v.slice_slider_sagittal.end
     else:
-        x = int(event.x)
+        x = int(round(event.x))
 
     if event.y<1:
         y = 1
     elif event.y > v.slice_slider_frontal.end:
         y = v.slice_slider_frontal.end
     else:
-        y = int(event.y)
-
+        y = int(round(event.y))
+    
     dontplot = True
     v.slice_slider_frontal.update(value = v.slice_slider_frontal.end - y+1)
     dontplot = False
     v.slice_slider_sagittal.update(value = x)
     if not v.toggle_regions.active: v.plot_frontal()
+
 
 def click_sagittal_callback(event):
     if debug: print("Called click_sagittal_callback().")
@@ -71,21 +73,20 @@ def click_sagittal_callback(event):
     elif event.x > v.slice_slider_frontal.end:
         x = v.slice_slider_frontal.end
     else:
-        x = int(event.x)
+        x = int(round(event.x))
 
     if event.y<1:
         y = 1
     elif event.y > v.slice_slider_axial.end:
         y = v.slice_slider_axial.end
     else:
-        y = int(event.y)
-
+        y = int(round(event.y))
+    
     dontplot = True
     v.slice_slider_frontal.update(value = x)
     dontplot = False
     v.slice_slider_axial.update(value = y)
     if not v.toggle_regions.active: v.plot_frontal()
-
 
 
 def select_subject_worker():
@@ -115,6 +116,7 @@ def select_subject_worker():
 
 def select_subject_callback(attr, old, new):
     if debug: print("Called select_subject_callback().")
+    
     v.disable_widgets()
     # This branching is necessary because the 'next tick' occurs only after the entire main script is run.
     # In that case firstrun would already be set to False and the v.update_guide_*() calls would not initialize properly.
@@ -126,6 +128,7 @@ def select_subject_callback(attr, old, new):
     
 def select_model_worker():
     if debug: print("Called select_model_worker().")
+    
     # Might take a long time if model is not cached yet.
     m.set_model(v.model_select.value)
     print("Finished selecting new model.")
@@ -142,6 +145,7 @@ def select_model_callback(attr, old, new):
 
 def apply_thresholds_callback(attr, old, new):
     if debug: print("Called apply_thresholds_callback().")
+    
     v.apply_thresholds(m.relevance_map, threshold = v.threshold_slider.value, cluster_size = v.clustersize_slider.value)
     v.update_guide_frontal()
     v.update_guide_axial()
@@ -155,7 +159,7 @@ def set_slice_frontal_callback(attr, old, new):
     if debug: print("Called set_slice_frontal_callback().")
     
     v.axial_crosshair_from_frontal.update(location = v.slice_slider_frontal.end - new +1)
-    v.sagittal_crosshair_from_frontal.update(location = new -1)
+    v.sagittal_crosshair_from_frontal.update(location = new)
     v.update_region_div()
     v.update_cluster_divs()
     if not dontplot: #is set True if called from crosshair-click-callback
@@ -167,8 +171,8 @@ def set_slice_frontal_callback(attr, old, new):
 def set_slice_axial_callback(attr, old, new):
     if debug: print("Called set_slice_axial_callback().")
 
-    v.frontal_crosshair_from_axial.update(location =  new -1)
-    v.sagittal_crosshair_from_axial.update(location = new -1)
+    v.frontal_crosshair_from_axial.update(location = new)
+    v.sagittal_crosshair_from_axial.update(location = new)
     v.update_region_div()
     v.update_cluster_divs()
     if not dontplot:
@@ -180,8 +184,8 @@ def set_slice_axial_callback(attr, old, new):
 def set_slice_sagittal_callback(attr, old, new):
     if debug: print("Called set_slice_sagittal_callback().")
 
-    v.frontal_crosshair_from_sagittal.update(location= new -1 )
-    v.axial_crosshair_from_sagittal.update(location= new -1 )
+    v.frontal_crosshair_from_sagittal.update(location = new)
+    v.axial_crosshair_from_sagittal.update(location = new)
     v.update_region_div()
     v.update_cluster_divs()
     if not dontplot:

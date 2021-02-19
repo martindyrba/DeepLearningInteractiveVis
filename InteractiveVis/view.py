@@ -8,7 +8,7 @@ from bokeh.io import output_notebook, push_notebook, show
 from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
 from bokeh.models.glyphs import Rect
-from bokeh.models import Div, Toggle, Label, LinearColorMapper
+from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource
 import numpy as np
 from PIL import Image
 from matplotlib import cm
@@ -19,6 +19,7 @@ from config import scale_factor
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_ID, aal_drawn, age, cov_idx, sex, tiv
 from config import debug, flip_left_right_in_frontal_plot
+
 
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
 jet_color_palette = []
@@ -116,6 +117,7 @@ class View():
         ovl[:,:,:,3] = np.uint8(alpha_mask * 255) # replace alpha channel (fourth dim) with calculated values
         ret = ovl.view("uint32").reshape(ovl.shape[:3]) # convert to 3D array of uint32
         return ret
+        
 
     @staticmethod
     def region2RGBA(rg, region_ID, alpha = 0.5):
@@ -223,16 +225,13 @@ class View():
         ovl = self.rendered_overlay[:,:,self.slice_slider_frontal.value-1]
         ovl = np.flipud(ovl)
         
+        
         if (self.toggle_regions.active):
             rg = aal_drawn[:,:,self.slice_slider_frontal.value-1] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
-            
-            # This bokeh function call takes > 100ms, so we approve potentially redundant plotting of background 
-            # and overlay if only the region outline would have changed. The other preparation of plotted arrays
-            # above this line does not really matter performance wise (e.g. region2RGBA() takes ~1ms per slice).
-            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=bg.shape[1], dh=bg.shape[0])
         else:
-            self.p_frontal.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+            rg = self.frontal_zeros
+        self.frontal_data.data.update(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg])
 
 
     def plot_axial(self):
@@ -247,9 +246,9 @@ class View():
             rg = aal_drawn[self.slice_slider_axial.value-1,:,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
             rg = np.rot90(rg)
-            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
-            self.p_axial.image_rgba(image=[np.fliplr(img) for img in [bg,ovl]] if self.flip_frontal_view.active else [bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1] , dh=bg.shape[0]) #note that bg has been rotated here, so coords for dw and dh are different than expected!
+            rg = self.axial_zeros
+        self.axial_data.data.update(image=[np.fliplr(img) for img in [bg,ovl,rg]] if self.flip_frontal_view.active else [bg,ovl,rg])
 
 
     def plot_sagittal(self):
@@ -263,9 +262,9 @@ class View():
         if (self.toggle_regions.active):
             rg = aal_drawn[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:] #rg = region
             rg = View.region2RGBA(rg, self.region_ID)
-            self.p_sagittal.image_rgba(image=[bg,ovl,rg], x=[0,0,0], y=[0,0,0], dw=rg.shape[1], dh=rg.shape[0])
         else:
-            self.p_sagittal.image_rgba(image=[bg,ovl], x=[0,0], y=[0,0], dw=bg.shape[1], dh=bg.shape[0])
+            rg = self.sagittal_zeros
+        self.sagittal_data.data.update(image=[bg,ovl,rg])
 
 
     def disable_widgets(self):
@@ -365,6 +364,7 @@ class View():
         
         self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200, active=flip_left_right_in_frontal_plot)
         
+        
         self.orientation_label_shown_left = Label(
                          text='R' if flip_left_right_in_frontal_plot else 'L',
                          render_mode='css', x = 3,
@@ -389,10 +389,10 @@ class View():
         self.p_frontal.add_layout(self.orientation_label_shown_right, 'center')
 
         # The vertical crosshair line on the frontal view that indicates the selected sagittal slice.
-        self.frontal_crosshair_from_sagittal = Span(location = self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_dash='dashed', line_width=2)
+        self.frontal_crosshair_from_sagittal = Span(location = self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_width=1, render_mode="css")
 
         # The horizontal crosshair line on the frontal view that indicates the selected axial slice.
-        self.frontal_crosshair_from_axial = Span(location=self.slice_slider_axial.value-1, dimension='width', line_color='green', line_dash='dashed', line_width=2)
+        self.frontal_crosshair_from_axial = Span(location=self.slice_slider_axial.value-1, dimension='width', line_color='green', line_width=1, render_mode="css")
         self.p_frontal.add_layout(self.frontal_crosshair_from_sagittal)
         self.p_frontal.add_layout(self.frontal_crosshair_from_axial)
 
@@ -403,8 +403,8 @@ class View():
         self.p_axial.x_range.range_padding = 0
         self.p_axial.y_range.range_padding = 0
 
-        self.axial_crosshair_from_sagittal = Span(location=self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_dash='dashed', line_width=2)
-        self.axial_crosshair_from_frontal = Span(location=self.slice_slider_frontal.end-self.slice_slider_frontal.value + 1, dimension='width', line_color='green', line_dash='dashed', line_width=2)
+        self.axial_crosshair_from_sagittal = Span(location=self.slice_slider_sagittal.value-1, dimension='height', line_color='green', line_width=1, render_mode="css")
+        self.axial_crosshair_from_frontal = Span(location=self.slice_slider_frontal.end-self.slice_slider_frontal.value + 1, dimension='width', line_color='green', line_width=1, render_mode="css")
         self.p_axial.add_layout(self.axial_crosshair_from_sagittal)
         self.p_axial.add_layout(self.axial_crosshair_from_frontal)
 
@@ -415,8 +415,8 @@ class View():
         self.p_sagittal.x_range.range_padding = 0
         self.p_sagittal.y_range.range_padding = 0
 
-        self.sagittal_crosshair_from_frontal = Span(location=self.slice_slider_frontal.value-1, dimension='height', line_color='green', line_dash='dashed', line_width=2)
-        self.sagittal_crosshair_from_axial = Span(location=self.slice_slider_axial.end-self.slice_slider_axial.value-1, dimension='width', line_color='green', line_dash='dashed', line_width=2)
+        self.sagittal_crosshair_from_frontal = Span(location=self.slice_slider_frontal.value-1, dimension='height', line_color='green', line_width=1, render_mode="css")
+        self.sagittal_crosshair_from_axial = Span(location=self.slice_slider_axial.end-self.slice_slider_axial.value-1, dimension='width', line_color='green', line_width=1, render_mode="css")
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_frontal)
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_axial)
         
@@ -433,6 +433,23 @@ class View():
         self.p_axial.add_layout(self.loading_label)
         
         self.render_backround()
+        
+        #create empty plot objects with empty ("fully transparent") ColumnDataSources):
+        self.frontal_zeros = np.zeros_like(np.flipud(self.bg[:,:,self.slice_slider_frontal.value-1]))
+        self.axial_zeros = np.zeros_like(np.rot90(self.bg[self.m.subj_bg.shape[0]-self.slice_slider_axial.value,:,:]))
+        self.sagittal_zeros = np.zeros_like(np.flipud(self.bg[:,self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value-1,:]))
+        self.frontal_zeros[True]=255 #value for a fully transparent pixel
+        self.axial_zeros[True]=255
+        self.sagittal_zeros[True]=255
+        
+        self.frontal_data  = ColumnDataSource(data=dict(image=[self.frontal_zeros, self.frontal_zeros, self.frontal_zeros],    x=[0,0,0], y=[0,0,0]))
+        self.axial_data    = ColumnDataSource(data=dict(image=[self.axial_zeros, self.axial_zeros, self.axial_zeros],          x=[0,0,0], y=[0,0,0]))
+        self.sagittal_data = ColumnDataSource(data=dict(image=[self.sagittal_zeros, self.sagittal_zeros, self.sagittal_zeros], x=[0,0,0], y=[0,0,0]))
+        
+        self.p_frontal.image_rgba(image = "image", x="x", y="y", dw=self.frontal_zeros.shape[1], dh=self.frontal_zeros.shape[0], source = self.frontal_data)
+        self.p_axial.image_rgba(image = "image", x="x", y="y", dw=self.axial_zeros.shape[1], dh=self.axial_zeros.shape[0], source = self.axial_data)
+        self.p_sagittal.image_rgba(image = "image", x="x", y="y", dw=self.sagittal_zeros.shape[1], dh=self.sagittal_zeros.shape[0], source = self.sagittal_data)
+        
 
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
@@ -451,7 +468,7 @@ class View():
         
         #Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a parent figure in Bokeh:
         self.p_color_bar = figure(plot_width=100,
-            plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)),# + 70 + self.guide_sagittal.plot_height,
+            plot_height=int(np.floor(m.subj_bg.shape[0]*scale_factor)),
             title='',
             toolbar_location=None,
             active_drag=None, active_inspect=None, active_scroll=None, active_tap=None, outline_line_alpha = 0.0)
