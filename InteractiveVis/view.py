@@ -7,7 +7,7 @@ from bokeh.plotting import figure, curdoc
 # from bokeh.io import output_notebook, push_notebook, show #unused import
 from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
-from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource
+from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner
 import numpy as np
 # from PIL import Image
 from matplotlib import cm
@@ -17,7 +17,7 @@ from skimage.measure import label, regionprops
 from config import scale_factor
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_id, aal_drawn, age, cov_idx, \
-    sex, tiv
+    sex, tiv, field
 from config import debug, flip_left_right_in_frontal_plot
 
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
@@ -30,6 +30,8 @@ class View:
 
     def update_region_div(self):
         """
+        Called upon change of slider positions.
+        
         Obtains selected region ID from current slider positions and updates the region Div
         with the region name corresponding to the region ID.
         :return: None
@@ -43,6 +45,12 @@ class View:
         self.region_div.update(text="Region: " + self.selected_region)
 
     def update_cluster_divs(self):
+        """
+        Called after changes of the relevance map, selected subject, threshold or slider positions.
+
+        Obtains statistical information about the selected cluster's intensity and displays that.
+        :return: None
+        """
         self.cluster_index = self.clust_labelimg[self.m.subj_bg.shape[
                                                      0] - self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value - 1, self.slice_slider_frontal.value - 1]
         if self.cluster_index == 0:
@@ -58,17 +66,40 @@ class View:
             self.cluster_peak_div.update(
                 text="Peak Intensity: " + str(format(self.clust_peak_intensities[self.cluster_index], '.2f')))
 
-    def update_subject_divs(self, subj_id):
-        if debug: print("Called update_subject_divs().")
-        self.age_div.update(text="Age: %.0f " % age.iloc[cov_idx[subj_id]])
-        if sex.iloc[cov_idx[subj_id]] == 1:
-            self.sex_div.update(text="Sex: " + "female")
-        elif sex.iloc[cov_idx[subj_id]] == 0:
-            self.sex_div.update(text="Sex: " + "male")
+    def update_covariate_info(self, subj_id, entered_covariates):
+        """
+        Called if a new subject has been selected.
+
+        Displays the covariate information age, sex, TIV (brain volume) and field strength of the scan.
+        Note that exactly one of the parameters should be None.
+
+        :param int subj_id: ID of selected subject, if an internal scan is selected, otherwise None.
+        :param pandas.DataFrame entered_covariates: DataFrame of entered covariates if the uploaded scan is selected,
+        otherwise None.
+        :return: None
+        """
+        if debug: print("Called update_covariate_info().")
+        if subj_id != None:
+            self.age_spinner.update(value=age.iloc[cov_idx[subj_id]] if self.subject_select.value != "User Upload"
+                                    else self.entered_covariates.get("Age"))
+            if (sex.iloc[cov_idx[subj_id]] == 1):
+                self.sex_select.update(value="female")
+            elif (sex.iloc[cov_idx[subj_id]] == 0):
+                self.sex_select.update(value="male")
+            else:
+                self.sex_select.update(value="N/A")
+            self.tiv_spinner.update(value=tiv.iloc[cov_idx[subj_id]])
+            self.field_strength_select.update(value=str(field.iloc[cov_idx[subj_id]]))
         else:
-            self.sex_div.update(text="Sex: " + "N/A")
-        # tiv_div.update(text="TIV: " + str(tiv.iloc[cov_idx[subj_id]]))
-        self.tiv_div.update(text="TIV: %.0f cm³" % tiv.iloc[cov_idx[subj_id]])
+            self.age_spinner.update(value=int(entered_covariates['Age'].values[0]))
+            if (entered_covariates['Sex'].values[0] == 1):
+                self.sex_select.update(value="female")
+            elif (entered_covariates['Sex'].values[0] == 0):
+                self.sex_select.update(value="male")
+            else:
+                self.sex_select.update(value="N/A")
+            self.tiv_spinner.update(value=float(entered_covariates['TIV'].values[0]))
+            self.field_strength_select.update(value=str(entered_covariates['FieldStrength'].values[0]))
 
     def apply_thresholds(self, relevance_map, threshold=0.5, cluster_size=20):
         if debug: print("Called apply_thresholds().")
@@ -185,6 +216,12 @@ class View:
         self.rendered_overlay = View.overlay2rgba(self.overlay, alpha=1 - self.transparency_slider.value)
 
     def update_guide_frontal(self):
+        """
+        Called if new subject has been selected or the threshold/clustersize sliders have been modified.
+
+        Updates the histogram under the frontal plot.
+        :return: None
+        """
         x = np.arange(0, self.sum_neg_frontal.shape[0])
         y0 = np.zeros(x.shape, dtype=int)
         if self.firstrun:
@@ -213,6 +250,12 @@ class View:
                                                   'left': edges[:-1], 'right': edges[1:]}
 
     def update_guide_axial(self):
+        """
+        Called if new subject has been selected or the threshold/clustersize sliders have been modified.
+
+        Updates the histogram under the axial plot.
+        :return: None
+        """
         x_mirrored = np.arange(0, self.sum_neg_axial.shape[0])  # needs to be flipped
         x = x_mirrored[::-1]
         y0 = np.zeros(x.shape, dtype=int)
@@ -242,6 +285,12 @@ class View:
                                                 'left': edges[:-1], 'right': edges[1:]}
 
     def update_guide_sagittal(self):
+        """
+        Called if new subject has been selected or the threshold/clustersize sliders have been modified.
+
+        Updates the histogram under the sagittal plot.
+        :return: None
+        """
         x = np.arange(0, self.sum_neg_sagittal.shape[0])
         if self.flip_frontal_view.active: x = np.flip(x)
         y0 = np.zeros(x.shape, dtype=int)
@@ -282,6 +331,15 @@ class View:
         self.bg = View.bg2rgba(self.m.subj_bg)
 
     def plot_frontal(self):
+        """
+        Called if a new subject has been selected, the overlay heatmap has been modified (e.g. by modifying the
+        threshold slider) or if the frontal slider has been modified.
+
+        Selects a 2D slice according to the frontal slider value and changes the figure's underlying ColumnDataSource,
+        which will re-plot the frontal figure with background, overlay and region outline (if activated).
+
+        :return: None
+        """
         if debug: print("Called plot_frontal().")
 
         bg = self.bg[:, :, self.slice_slider_frontal.value - 1]
@@ -298,6 +356,15 @@ class View:
             image=[np.fliplr(img) for img in [bg, ovl, rg]] if self.flip_frontal_view.active else [bg, ovl, rg])
 
     def plot_axial(self):
+        """
+        Called if a new subject has been selected, the overlay heatmap has been modified (e.g. by modifying the
+        threshold slider) or if the axial slider has been modified.
+
+        Selects a 2D slice according to the axial slider value and changes the figure's underlying ColumnDataSource,
+        which will re-plot the axial figure with background, overlay and region outline (if activated).
+
+        :return: None
+        """
         if debug: print("Called plot_axial().")
 
         bg = self.bg[self.m.subj_bg.shape[0] - self.slice_slider_axial.value, :, :]
@@ -315,6 +382,15 @@ class View:
             image=[np.fliplr(img) for img in [bg, ovl, rg]] if self.flip_frontal_view.active else [bg, ovl, rg])
 
     def plot_sagittal(self):
+        """
+        Called if a new subject has been selected, the overlay heatmap has been modified (e.g. by modifying the
+        threshold slider) or if the sagittal slider has been modified.
+
+        Selects a 2D slice according to the sagittal slider value and changes the figure's underlying ColumnDataSource,
+        which will re-plot the sagittal figure with background, overlay and region outline (if activated).
+
+        :return: None
+        """
         if debug: print("Called plot_sagittal().")
 
         bg = self.bg[:,
@@ -372,6 +448,32 @@ class View:
         self.toggle_regions.update(disabled=False)
         self.flip_frontal_view.update(disabled=False)
         self.loading_label.update(visible=False)
+
+    def make_covariates_editable(self):
+        """
+        Called if a Nifti file has been uploaded and the user should input the covariates.
+        :return: None
+        """
+        if debug: print("Called make_covariates_editable()")
+        self.age_spinner.update(disabled=False)
+        self.sex_select.update(disabled=False)
+        self.tiv_spinner.update(disabled=False)
+        self.field_strength_select.update(disabled=False)
+        self.residualize_button.update(disabled=False)
+
+    def freeze_covariates(self):
+        """
+        Called if an internal scan has been selected. In that case covariates should
+        not be editable (only for scans uploaded by the user).
+
+        :return: None
+        """
+        if debug: print("Called freeze_covariates()")
+        self.age_spinner.update(disabled=True)
+        self.sex_select.update(disabled=True)
+        self.tiv_spinner.update(disabled=True)
+        self.field_strength_select.update(disabled=True)
+        self.residualize_button.update(disabled=True)
 
     def __init__(self, m):
         if debug: print("Initializing new View object...")
@@ -564,13 +666,11 @@ class View:
         self.cluster_mean_div = Div(text="Mean Intensity: " + "0", css_classes=["cluster_divs"])
         self.cluster_peak_div = Div(text="Peak Intensity: " + "0", css_classes=["cluster_divs"])
 
-        # see InteractiveVis/static/
-        self.age_div = Div(text="Age: " + "N/A", width=int(np.floor(m.subj_bg.shape[1] * scale_factor) // 2 - 10),
-                           css_classes=["subject_divs"])  # no subject selected at time of initialization
-        self.sex_div = Div(text="Sex: " + "N/A", width=int(np.floor(m.subj_bg.shape[1] * scale_factor) // 2 - 10),
-                           css_classes=["subject_divs"])
-        self.tiv_div = Div(text="TIV: " + "N/A", width=int(np.floor(m.subj_bg.shape[1] * scale_factor) // 2 - 10),
-                           css_classes=["subject_divs"])
+        # see InteractiveVis/static/ for default formatting/style definitions
+        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
+        self.sex_select = Select(title="Sex:", value="N/A", options=["male", "female", "N/A"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.field_strength_select = Select(title="Field Strength [T]:", value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
 
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
         # parent figure in Bokeh:
@@ -587,6 +687,11 @@ class View:
         self.color_mapper = LinearColorMapper(palette=jet_color_palette, low=-1, high=1)
         self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
+        
+        self.scan_upload = FileInput(accept='.nii.gz, .nii')
+        # TODO: why does the on_click subscription not work with a simple button, only with Toggle?
+        self.residualize_button = Toggle(label="Start residualization and view scan", button_type="default", active=False, disabled=True)
+
 
         # Initialize column layout:
         self.layout = row(
@@ -598,7 +703,8 @@ class View:
                 column(self.cluster_size_div, self.cluster_mean_div, self.cluster_peak_div)
             ),
             column(
-                row(self.age_div, self.sex_div, self.tiv_div, css_classes=["subject_divs"]),
+                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.scan_upload, css_classes=["subject_divs"]),
+                row(self.residualize_button),
                 row(
                     column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
                     column(self.p_axial, self.slice_slider_axial, self.guide_axial),

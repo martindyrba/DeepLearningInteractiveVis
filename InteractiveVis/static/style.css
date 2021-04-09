@@ -1,5 +1,5 @@
 .subject_divs {
-  height: 29px !important; /*width set in main.py dependent on plot size of MRI image*/
+  height: 59px !important; /*width set in main.py dependent on plot size of MRI image*/
   background-color:#CCBFB3;
   margin-top: 0px;
   margin-right: 5px;

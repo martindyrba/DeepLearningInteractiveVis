@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+import base64
+import glob
+import gzip
 import pickle
 import h5py
 import logging
 import os
+import re
+from io import BytesIO
 
 import innvestigate
 import nibabel as nib
@@ -14,6 +18,7 @@ import scipy
 import tensorflow as tf
 from keras.models import load_model
 # from sklearn.model_selection import train_test_split
+from sklearn import linear_model
 from keras.utils import to_categorical
 
 from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, \
@@ -54,7 +59,7 @@ if debug:
     print("model_input_images.shape=")
     print(model_input_images.shape)
 
-# specify version of tensorflow
+# specify version of tensorflow in Google Colab
 # %tensorflow_version 1.x
 logging.getLogger('tensorflow').disabled = True  # disable tensorflow deprecation warnings
 if debug:
@@ -260,7 +265,7 @@ class Model:
 
     def set_subject(self, subj_id):
         """
-        Callback for a new subject being selected.
+        Callback for a new subject being selected by id.
 
         :param int subj_id: the subject to select.
         :return: returns values by modifying instance variables: self.subj_bg, self.subj_img, self.pred, self.relevance_map
@@ -268,10 +273,21 @@ class Model:
         if debug: print("Called set_subject().")
 
         # global subj_bg, subj_img, pred, relevance_map # define global variables to store subject data
-        self.subj_img = test_images[subj_id]
+        self.set_subj_img(test_images[subj_id])
+        self.set_subj_bg(testdat_bg[subj_id, :, :, :, 0])
+
+        return
+
+    def set_subj_img(self, img):
+        """
+        Sets the model input image and creates relevance map and prediction.
+        :param numpy.ndarray img: the residualized model input image
+        :return: None
+        """
+        self.subj_img = img
         self.subj_img = np.reshape(self.subj_img, (
             1,) + self.subj_img.shape)  # add first subj index again to mimic original array structure
-        self.subj_bg = testdat_bg[subj_id, :, :, :, 0]
+
         # evaluate/predict diag for selected subject
         self.pred = (self.mymodel.predict(self.subj_img)[0, 1] * 100)  # scale probability score to percent
         # derive relevance map from CNN model
@@ -282,19 +298,142 @@ class Model:
         self.relevance_map = Model.scale_relevance_map(self.relevance_map, 3)
         # print(np.max(relevance_map), np.min(relevance_map))
 
-        return
+    def set_subj_bg(self, bg):
+        """
+
+        :param numpy.ndarray bg: the background image
+        :return: None
+        """
+        self.subj_bg = bg
+
+    def load_nifti(self, base64str, is_zipped):
+        """
+        Load base64 encoded string read from uploaded file upload into array.
+        Also crops and flips the resulting image
+
+
+        :param str base64str: base64 encoded string (i.e. the uploaded file)
+        :param boolean is_zipped: if the file is zipped (i.e. if the uploaded file name ends with '.gz')
+        :return: the nifti image as numpy array:
+            <li> 1. dimension: image row
+            <li> 2. dimension: image column
+            <li> 3. dimension: image depth
+            <li> 4. dimension: color channels (should be 1, because of monochrome gray scan)
+        :rtype: numpy.ndarray
+        """
+
+        # x: sag
+        # y: cor
+        # z: axi
+
+        x_range_from = 10
+        x_range_to = 110
+        y_range_from = 10
+        y_range_to = 130
+        z_range_from = 5
+        z_range_to = 105
+
+        if debug: print('Called load_nifti().')
+
+        img_arr = np.zeros(
+            (z_range_to - z_range_from, x_range_to - x_range_from, y_range_to - y_range_from, 1),
+            dtype=np.float32)  # z×x×y×1; avoid 64bit types
+
+        base64_bytes = base64str.encode("ascii")
+        raw_bytes = base64.b64decode(base64_bytes)
+        if is_zipped:
+            if debug: print("Unzipping...")
+            nifti_bytes = gzip.decompress(raw_bytes)
+        else:
+            if debug: print("Not unzipping...")
+            nifti_bytes = raw_bytes
+        inputstream = BytesIO(nifti_bytes)
+        file_holder = nib.FileHolder(fileobj=inputstream)
+
+        img = nib.Nifti1Image.from_file_map({'header': file_holder, 'image': file_holder})
+        if debug:
+            print("original img.shape:")
+            print(img.shape)
+        img = img.get_fdata()[x_range_from:x_range_to, y_range_from:y_range_to, z_range_from:z_range_to]
+        inputstream.close()
+        img = np.transpose(img, (2, 0, 1))  # reorder dimensions to match coronal view z*x*y in MRIcron etc.
+        img = np.flip(img)  # flip all positions
+        if debug:
+            print("cropped img.shape: ")
+            print(img.shape)
+        img_arr[:, :, :, 0] = np.nan_to_num(img)  # orientation: axial,sagittal,coronal,colorchannel
+
+        print("Successfully loaded uploaded nifti.")
+        self.uploaded_bg_img = img_arr
+        return img_arr
+
+    def residualize(self, img_arr, age=73, sex=0.498181818, tiv=1409, field=2.859090909):
+        """
+        Performs linear regression-based covariates cleaning of given scan.
+        Takes ~1 min.
+
+        Default covariate values are average values from ADNI sample.
+
+        :param img_arr: numpy array to residualize
+        :param int age: age of subject in years
+        :param float sex: 1 = female, 0 = male
+        :param float tiv: head volume in cm³
+        :param field: the MRI field strength
+        :return: the residualized array
+        :rtype: numpy.ndarray
+        """
+
+
+        # Perform regression-based covariates cleaning
+        res = np.copy(img_arr)  # residualized image
+
+        self.entered_covariates_df = pd.DataFrame({'Age': [age], 'Sex': [sex], 'TIV': [tiv], 'FieldStrength': [field]})
+        print(self.entered_covariates_df)
+        covariates = self.entered_covariates_df.to_numpy(dtype=np.float32)  # convert data frame to nparray with 32bit types
+
+
+        # load coefficients for linear models from hdf5
+        # TODO: only load hdf5 from disk once at server start and avoid accessing hard drive every time.
+        hf = h5py.File('linearmodels.hdf5', 'r')
+        hf.keys  # read keys
+        lmarray = np.array(hf.get('linearmodels'), dtype=np.float32)  # stores 4 coefficients + 1 intercept per voxel
+        hf.close()
+
+        # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
+        # print("Controls covariates data frame size : ", covCN.shape)
+        lmLoaded = linear_model.LinearRegression()
+
+        for k in range(res.shape[2]):
+            if (k % 10 == 0): print('Processing depth slice ', str(k + 1), ' of ', str(res.shape[2]))
+            for j in range(res.shape[1]):
+                for i in range(res.shape[0]):
+
+                    if any(lmarray[k, j, i, :] != 0):
+                        # load fitted linear model from file
+                        lmLoaded.coef_ = lmarray[k, j, i, :4]
+                        lmLoaded.intercept_ = lmarray[k, j, i, 4]
+
+                        pred = lmLoaded.predict(covariates)  # calculate prediction for all subjects
+                        res[i, j, k, 0] = res[
+                                              i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
+        print("Residualization successful.")
+        self.uploaded_residual = res
+        return res
 
     def __init__(self):
-        if debug: print("Initializing new datamodel object...")
+        if (debug): print("Initializing new datamodel object...")
 
         # Instance attributes (actual values set in set_model(...) and set_subject(...))
         self.analyzer = None
         self.relevance_map = None
-        self.selected_model = None
-        self.mymodel = None
-        self.subj_img = None
-        self.subj_bg = None
-        self.pred = None
+        self.selected_model = None # filename of selected model
+        self.mymodel = None # actual loaded model
+        self.subj_img = None # model input image
+        self.subj_bg = None # background image for plotting
+        self.pred = None # current scan prediction for Alzheimer's
+        self.uploaded_bg_img = None
+        self.uploaded_residual = None
+        self.entered_covariates_df = None # DataFrame of entered covariates
 
         # load selected model data from cache or disk:
         self.set_model(selected_model)
