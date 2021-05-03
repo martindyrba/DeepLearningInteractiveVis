@@ -22,7 +22,7 @@ from sklearn import linear_model
 from keras.utils import to_categorical
 
 from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, \
-    background_images_path, residuals_path, covariates_file, do_model_prefetch
+    background_images_path, residuals_path, covariates_file, do_model_prefetch, linear_model_path
 
 if debug:
     print("stored_models = ")
@@ -134,13 +134,14 @@ if debug:
 
 # see https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb for a list of alternative methods
 methods = [  # tuple with method,     params,                  label
-    #            ("deconvnet",            {},                      "Deconvnet"),
-    #            ("guided_backprop",      {},                      "Guided Backprop"),
-    #            ("deep_taylor.bounded",  {"low": -1, "high": 1},  "DeepTaylor"),
-    #            ("input_t_gradient",     {},                      "Input * Gradient"),
-    #            ("lrp.z",                {},                      "LRP-Z"),
-    #            ("lrp.epsilon",          {"epsilon": 1},          "LRP-epsilon"),
-    ("lrp.alpha_1_beta_0", {"neuron_selection_mode": "index"}, "LRP-alpha1beta0"),
+    # ("deconvnet",            {},                      "Deconvnet"),
+    # ("guided_backprop",      {},                      "Guided Backprop"),
+    # ("deep_taylor.bounded",  {"low": -1, "high": 1},  "DeepTaylor"),
+    # ("input_t_gradient",     {},                      "Input * Gradient"),
+    # ("lrp.z",                {},                      "LRP-Z"),
+    # ("lrp.epsilon",          {"epsilon": 1},          "LRP-epsilon"),
+    # ("lrp.alpha_1_beta_0", {"neuron_selection_mode": "index"}, "LRP-alpha1beta0"),
+    ("lrp.sequential_preset_a", {"neuron_selection_mode": "index", "epsilon": 1e-10}, "LRP-CMPalpha1beta0"), # LRP CMP rule taken from https://github.com/berleon/when-explanations-lie/blob/master/when_explanations_lie.py
 ]
 
 model_cache = dict()
@@ -235,7 +236,8 @@ class Model:
         if debug: print("Called scale_relevance_map()")
         r_map = np.copy(relevance_map)  # leave original object unmodified.
         # perform intensity normalization
-        scale = np.quantile(np.absolute(r_map), 0.99)
+        #scale = np.quantile(np.absolute(r_map), 0.99)
+        scale = 1/100 # multiply by 100
         if scale != 0:  # fallback if quantile returns zero: directly use abs max instead
             r_map = (r_map / scale)  # rescale range
         # corresponding to vmax in plt.imshow; vmin=-vmax used here
@@ -295,7 +297,7 @@ class Model:
         self.relevance_map = np.reshape(self.relevance_map, self.subj_img.shape[1:4])  # drop first index again
         self.relevance_map = scipy.ndimage.filters.gaussian_filter(self.relevance_map,
                                                                    sigma=0.8)  # smooth activity image
-        self.relevance_map = Model.scale_relevance_map(self.relevance_map, 3)
+        self.relevance_map = Model.scale_relevance_map(self.relevance_map, 1)
         # print(np.max(relevance_map), np.min(relevance_map))
 
     def set_subj_bg(self, bg):
@@ -392,31 +394,35 @@ class Model:
         covariates = self.entered_covariates_df.to_numpy(dtype=np.float32)  # convert data frame to nparray with 32bit types
 
 
-        # load coefficients for linear models from hdf5
-        # TODO: only load hdf5 from disk once at server start and avoid accessing hard drive every time.
-        hf = h5py.File('linearmodels.hdf5', 'r')
-        hf.keys  # read keys
-        lmarray = np.array(hf.get('linearmodels'), dtype=np.float32)  # stores 4 coefficients + 1 intercept per voxel
-        hf.close()
+        if linear_model_path is None: # shortcut to avoid residualization if no model is given
+            print("Skipping residualization, returning original data.")
+        else:
+            # load coefficients for linear models from hdf5
+            # TODO: only load hdf5 from disk once at server start and avoid accessing hard drive every time.
+            hf = h5py.File(linear_model_path, 'r')
+            hf.keys  # read keys
+            lmarray = np.array(hf.get('linearmodels'), dtype=np.float32)  # stores 4 coefficients + 1 intercept per voxel
+            hf.close()
 
-        # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
-        # print("Controls covariates data frame size : ", covCN.shape)
-        lmLoaded = linear_model.LinearRegression()
+            # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
+            # print("Controls covariates data frame size : ", covCN.shape)
+            lmLoaded = linear_model.LinearRegression()
 
-        for k in range(res.shape[2]):
-            if (k % 10 == 0): print('Processing depth slice ', str(k + 1), ' of ', str(res.shape[2]))
-            for j in range(res.shape[1]):
-                for i in range(res.shape[0]):
+            for k in range(res.shape[2]):
+                if (k % 10 == 0): print('Processing depth slice ', str(k + 1), ' of ', str(res.shape[2]))
+                for j in range(res.shape[1]):
+                    for i in range(res.shape[0]):
 
-                    if any(lmarray[k, j, i, :] != 0):
-                        # load fitted linear model from file
-                        lmLoaded.coef_ = lmarray[k, j, i, :4]
-                        lmLoaded.intercept_ = lmarray[k, j, i, 4]
+                        if any(lmarray[k, j, i, :] != 0):
+                            # load fitted linear model from file
+                            lmLoaded.coef_ = lmarray[k, j, i, :4]
+                            lmLoaded.intercept_ = lmarray[k, j, i, 4]
 
-                        pred = lmLoaded.predict(covariates)  # calculate prediction for all subjects
-                        res[i, j, k, 0] = res[
-                                              i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
-        print("Residualization successful.")
+                            pred = lmLoaded.predict(covariates)  # calculate prediction for all subjects
+                            res[i, j, k, 0] = res[
+                                                  i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
+            print("Residualization successful.")
+            
         self.uploaded_residual = res
         return res
 

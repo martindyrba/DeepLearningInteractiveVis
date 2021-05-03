@@ -5,7 +5,7 @@
 from config import debug
 from datamodel import index_lst, sorted_xs, Model
 import view
-from bokeh.events import Tap, Pan
+from bokeh.events import Tap, Pan, MouseWheel
 import numpy as np
 
 
@@ -224,6 +224,46 @@ def apply_thresholds_callback(attr, old, new):
     v.plot_sagittal()
 
 
+def set_slice_frontal_mouse_wheel(event):
+    """
+    Called when mouse wheel is used on the frontal slice view.
+    
+    :param MouseWheel event: float delta contains the (signed) scroll speed.
+    :return: None
+    """
+    if event.delta > 0 and v.slice_slider_frontal.value > v.slice_slider_frontal.start:
+        v.slice_slider_frontal.value -= 1
+    elif event.delta < 0 and v.slice_slider_frontal.value < v.slice_slider_frontal.end:
+        v.slice_slider_frontal.value += 1
+    print("Mouse Scroll Event Fired on Frontal")
+
+def set_slice_axial_mouse_wheel(event):
+    """
+    Called when mouse wheel is used on the axial slice view.
+    
+    :param MouseWheel event: float delta contains the (signed) scroll speed.
+    :return: None
+    """
+    if event.delta > 0 and v.slice_slider_axial.value < v.slice_slider_axial.end:
+        v.slice_slider_axial.value += 1 
+    elif event.delta < 0 and v.slice_slider_axial.value > v.slice_slider_axial.start:
+        v.slice_slider_axial.value -= 1 
+    print("Mouse Scroll Event Fired on Axial")
+
+def set_slice_sagittal_mouse_wheel(event):
+    """
+    Called when mouse wheel is used on the sagittal slice view.
+    
+    :param MouseWheel event: float delta contains the (signed) scroll speed.
+    :return: None
+    """
+    if event.delta > 0 and v.slice_slider_sagittal.value < v.slice_slider_sagittal.end:
+        v.slice_slider_sagittal.value += 1 
+    elif event.delta < 0 and v.slice_slider_sagittal.value > v.slice_slider_sagittal.start:
+        v.slice_slider_sagittal.value -= 1 
+    print("Mouse Scroll Event Fired on Sagittal")
+ 
+
 def set_slice_frontal_callback(attr, old, new):
     """
     Called if the slice_slider_frontal has been modified (directly by user or or indirectly via click event)
@@ -414,13 +454,17 @@ m = Model()  # construct new datamodel object for storing selected subject/cnn m
 # cannot be shared across client sessions:
 v = view.View(m)
 
-# Set callbacks for events:
+# handle clicking events
 v.p_frontal.on_event(Tap, click_frontal_callback)
 v.p_frontal.on_event(Pan, click_frontal_callback)
 v.p_axial.on_event(Tap, click_axial_callback)
 v.p_axial.on_event(Pan, click_axial_callback)
 v.p_sagittal.on_event(Tap, click_sagittal_callback)
 v.p_sagittal.on_event(Pan, click_sagittal_callback)
+# handle Mouse Wheel events
+v.p_frontal.on_event(MouseWheel, set_slice_frontal_mouse_wheel)
+v.p_axial.on_event(MouseWheel, set_slice_axial_mouse_wheel)
+v.p_sagittal.on_event(MouseWheel, set_slice_sagittal_mouse_wheel)
 
 # for jupyter notebook:
 # show(layout)
