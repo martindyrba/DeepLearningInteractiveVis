@@ -408,7 +408,7 @@ def upload_scan_callback(attr, old, new):
     # Set initial average values:
     v.age_spinner.update(value=73)
     v.sex_select.update(value='N/A')
-    v.tiv_spinner.update(value=1409)
+    v.tiv_spinner.update(value=1400)
     v.field_strength_select.update(value='3.0')
 
     m.load_nifti(new, is_zipped)
@@ -434,12 +434,11 @@ def residualize_worker():
     select_subject_worker()
 
 
-def enter_covariates_callback(event):
+def enter_covariates_callback():
     """
     Called if the 'Start residualization and view scan' button has been pressed.
     Disables widgets, shows 'loading label' and performs residualization work.
 
-    :param event: the button click event
     :return: None
     """
     if debug: print("Called enter_covariates_callback")

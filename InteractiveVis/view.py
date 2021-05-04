@@ -7,7 +7,7 @@ from bokeh.plotting import figure, curdoc
 # from bokeh.io import output_notebook, push_notebook, show #unused import
 from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
-from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner
+from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner, Button
 import numpy as np
 # from PIL import Image
 from matplotlib import cm
@@ -689,9 +689,10 @@ class View:
         self.p_color_bar.add_layout(self.color_bar)
         
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
-        # TODO: why does the on_click subscription not work with a simple button, only with Toggle?
-        self.residualize_button = Toggle(label="Start residualization and view scan", button_type="default", active=False, disabled=True)
-
+        self.residualize_button = Button(label="Start residualization and view scan", disabled=True)
+        def dummy():
+            print("Test residualize_button.on_click")
+        self.residualize_button.on_click(dummy) # TODO: remove this once on_click is working when setting callback only from the model class (bug in Bokeh 2.2.x ?)
 
         # Initialize column layout:
         self.layout = row(

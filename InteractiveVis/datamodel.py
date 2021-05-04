@@ -21,6 +21,9 @@ from keras.models import load_model
 from sklearn import linear_model
 from keras.utils import to_categorical
 
+import multiprocessing
+import concurrent.futures # this module was introduced in Python 3.2; use the futures backport module for Python 2.7
+
 from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, \
     background_images_path, residuals_path, covariates_file, do_model_prefetch, linear_model_path
 
@@ -249,7 +252,8 @@ class Model:
 
     def set_model(self, new_model_name):
         """
-
+        Callback for a new model being selected by path/file name.
+        
         :param str new_model_name: the path of the new model file to be selected.
         :return: None
         """
@@ -268,7 +272,7 @@ class Model:
     def set_subject(self, subj_id):
         """
         Callback for a new subject being selected by id.
-
+        
         :param int subj_id: the subject to select.
         :return: returns values by modifying instance variables: self.subj_bg, self.subj_img, self.pred, self.relevance_map
         """
@@ -283,6 +287,7 @@ class Model:
     def set_subj_img(self, img):
         """
         Sets the model input image and creates relevance map and prediction.
+        
         :param numpy.ndarray img: the residualized model input image
         :return: None
         """
@@ -302,7 +307,8 @@ class Model:
 
     def set_subj_bg(self, bg):
         """
-
+        Sets the visualization background image.
+        
         :param numpy.ndarray bg: the background image
         :return: None
         """
@@ -311,8 +317,7 @@ class Model:
     def load_nifti(self, base64str, is_zipped):
         """
         Load base64 encoded string read from uploaded file upload into array.
-        Also crops and flips the resulting image
-
+        Also crops and flips the resulting image.
 
         :param str base64str: base64 encoded string (i.e. the uploaded file)
         :param boolean is_zipped: if the file is zipped (i.e. if the uploaded file name ends with '.gz')
@@ -353,6 +358,7 @@ class Model:
         file_holder = nib.FileHolder(fileobj=inputstream)
 
         img = nib.Nifti1Image.from_file_map({'header': file_holder, 'image': file_holder})
+        assert (img.shape == (121, 145, 121))
         if debug:
             print("original img.shape:")
             print(img.shape)
@@ -372,74 +378,93 @@ class Model:
     def residualize(self, img_arr, age=73, sex=0.498181818, tiv=1409, field=2.859090909):
         """
         Performs linear regression-based covariates cleaning of given scan.
-        Takes ~1 min.
+        Takes about 1 min.
 
-        Default covariate values are average values from ADNI sample.
+        Default covariate values are average values from ADNI2 sample.
 
         :param img_arr: numpy array to residualize
         :param int age: age of subject in years
         :param float sex: 1 = female, 0 = male
-        :param float tiv: head volume in cm³
+        :param float tiv: head volume in cm³ = ml
         :param field: the MRI field strength
         :return: the residualized array
         :rtype: numpy.ndarray
         """
 
-
         # Perform regression-based covariates cleaning
         res = np.copy(img_arr)  # residualized image
-
+        
         self.entered_covariates_df = pd.DataFrame({'Age': [age], 'Sex': [sex], 'TIV': [tiv], 'FieldStrength': [field]})
         print(self.entered_covariates_df)
         covariates = self.entered_covariates_df.to_numpy(dtype=np.float32)  # convert data frame to nparray with 32bit types
 
-
         if linear_model_path is None: # shortcut to avoid residualization if no model is given
             print("Skipping residualization, returning original data.")
         else:
-            # load coefficients for linear models from hdf5
-            # TODO: only load hdf5 from disk once at server start and avoid accessing hard drive every time.
-            hf = h5py.File(linear_model_path, 'r')
-            hf.keys  # read keys
-            lmarray = np.array(hf.get('linearmodels'), dtype=np.float32)  # stores 4 coefficients + 1 intercept per voxel
-            hf.close()
+            if self.lmarray is None:
+                # load coefficients for linear models from hdf5
+                hf = h5py.File(linear_model_path, 'r')
+                hf.keys  # read keys
+                self.lmarray = np.array(hf.get('linearmodels'), dtype=np.float32)  # stores 4 coefficients + 1 intercept per voxel
+                hf.close()
 
             # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
             # print("Controls covariates data frame size : ", covCN.shape)
-            lmLoaded = linear_model.LinearRegression()
-
-            for k in range(res.shape[2]):
-                if (k % 10 == 0): print('Processing depth slice ', str(k + 1), ' of ', str(res.shape[2]))
-                for j in range(res.shape[1]):
-                    for i in range(res.shape[0]):
-
-                        if any(lmarray[k, j, i, :] != 0):
-                            # load fitted linear model from file
-                            lmLoaded.coef_ = lmarray[k, j, i, :4]
-                            lmLoaded.intercept_ = lmarray[k, j, i, 4]
-
-                            pred = lmLoaded.predict(covariates)  # calculate prediction for all subjects
-                            res[i, j, k, 0] = res[
-                                                  i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
-            print("Residualization successful.")
             
+            # multithreading implementation inspired by https://numpy.org/doc/stable/reference/random/multithreading.html
+            if self.executor is None:
+                self.executor = concurrent.futures.ThreadPoolExecutor(self.num_threads)
+                self.step_size = np.ceil(res.shape[2] / self.num_threads).astype(int)
+            
+            def _do_residualize(covs, lmcoeffs, data_in_out, first_slice, last_slice):
+                lm = linear_model.LinearRegression()
+
+                print('Processing depth slices ', str(first_slice), ' to ', str(last_slice), ' of ', str(data_in_out.shape[2]))
+                for k in range(first_slice, last_slice):
+                    for j in range(data_in_out.shape[1]):
+                        for i in range(data_in_out.shape[0]):
+                            if any(lmcoeffs[k, j, i, :] != 0): # skip empty voxels/space
+                                # load fitted linear model coefficients
+                                lm.coef_ = lmcoeffs[k, j, i, :4]
+                                lm.intercept_ = lmcoeffs[k, j, i, 4]
+                                pred = lm.predict(covs)  # calculate prediction for all subjects
+                                data_in_out[i, j, k, 0] = data_in_out[i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
+            
+            print("Submitting n=", str(self.num_threads), "threads for residualization")
+            futures = {}
+            for i in range(self.num_threads):
+                args = (_do_residualize,
+                        covariates,
+                        self.lmarray,
+                        res,
+                        i*self.step_size, 
+                        min((i+1)*self.step_size,res.shape[2]))
+                futures[self.executor.submit(*args)] = i
+            concurrent.futures.wait(futures)
+            print("Residualization successful.")
+        
         self.uploaded_residual = res
         return res
+
 
     def __init__(self):
         if (debug): print("Initializing new datamodel object...")
 
-        # Instance attributes (actual values set in set_model(...) and set_subject(...))
-        self.analyzer = None
-        self.relevance_map = None
+        # Instance attributes (values need to be set using set_model(...) and set_subject(...))
+        self.analyzer = None # analyzer object for the currently loaded model
+        self.relevance_map = None # filtered relevance map for the current input image
         self.selected_model = None # filename of selected model
-        self.mymodel = None # actual loaded model
-        self.subj_img = None # model input image
+        self.mymodel = None # currently selected/active model
+        self.subj_img = None # input image for the CNN model
         self.subj_bg = None # background image for plotting
-        self.pred = None # current scan prediction for Alzheimer's
-        self.uploaded_bg_img = None
-        self.uploaded_residual = None
+        self.pred = None # prediction for current image
+        self.uploaded_bg_img = None # stores images uploaded by user
+        self.uploaded_residual = None # stores residuals for user upload
         self.entered_covariates_df = None # DataFrame of entered covariates
+        self.lmarray = None # linear model coefficients used for covariate cleaning of user upload
+        self.executor = None # multithreading executor for parallel processing (used for residualization)
+        self.num_threads = multiprocessing.cpu_count()
+        self.step_size = None # array index step size for multithreading
 
         # load selected model data from cache or disk:
         self.set_model(selected_model)
@@ -447,3 +472,7 @@ class Model:
         # Call once to initialize first image and variables
         self.set_subject(index_lst[0])  # invoke with first subject
 
+
+    def __del__(self):
+        if self.executor is not None:
+            self.executor.shutdown(False)
