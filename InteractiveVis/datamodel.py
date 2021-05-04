@@ -9,6 +9,7 @@ import logging
 import os
 import re
 from io import BytesIO
+import sys
 
 import innvestigate
 import nibabel as nib
@@ -441,9 +442,17 @@ class Model:
             # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
             # print("Controls covariates data frame size : ", covCN.shape)
             
+            # TODO: move executor initialization and usage outside of the model class
             if self.executor is None:
-                self.executor = concurrent.futures.ProcessPoolExecutor(self.num_threads) # change to ThreadPoolExecutor for better debugging
-                self.step_size = np.ceil(img_arr.shape[2] / self.num_threads).astype(int)
+                if sys.platform == 'win32': 
+                    # disable multicore processing in Windows as the ProcessPoolExecutor does not seem to work properly
+                    # (trows ModuleNotFoundError: No module named 'datamodel')
+                    self.executor = concurrent.futures.ThreadPoolExecutor(1) # using single-threaded ThreadPoolExecutor isntead
+                    self.num_threads = 1
+                    self.step_size = img_arr.shape[2]
+                else: # Linux, MacOS
+                    self.executor = concurrent.futures.ProcessPoolExecutor(self.num_threads) # change to ThreadPoolExecutor for better debugging
+                    self.step_size = np.ceil(img_arr.shape[2] / self.num_threads).astype(int)
             
             print("Submitting n=", str(self.num_threads), " parallel workers for residualization")
             futures = []
