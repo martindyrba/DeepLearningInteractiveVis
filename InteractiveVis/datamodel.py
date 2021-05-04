@@ -224,31 +224,63 @@ def get_region_name(axi, sag, cor):
     return aal_region_names[int(aal[axi, sag, cor])]
 
 
+def scale_relevance_map(relevance_map, clipping_threshold):
+    """
+    Clips the relevance map to given threshold and adjusts it to range -1...1 float.
+
+    :param numpy.ndarray relevance_map:
+    :param int clipping_threshold: max value to be plotted, larger values will be set to this value
+    :return : The relevance map, clipped to given threshold and adjusted to range -1...1 float.
+    :rtype: numpy.ndarray
+    """
+    if debug: print("Called scale_relevance_map()")
+    r_map = np.copy(relevance_map)  # leave original object unmodified.
+    # perform intensity normalization
+    #scale = np.quantile(np.absolute(r_map), 0.99)
+    scale = 1/100 # multiply by 100
+    if scale != 0:  # fallback if quantile returns zero: directly use abs max instead
+        r_map = (r_map / scale)  # rescale range
+    # corresponding to vmax in plt.imshow; vmin=-vmax used here
+    # value derived empirically here from the histogram of relevance maps
+    r_map[r_map > clipping_threshold] = clipping_threshold  # clipping of positive values
+    r_map[r_map < -clipping_threshold] = -clipping_threshold  # clipping of negative values
+    r_map = r_map / clipping_threshold  # final range: -1 to 1 float
+    return r_map
+
+
+def do_residualize(covs, lmcoeffs, data, first_slice, last_slice):
+	"""
+	Actually performs the residualization of uploaded user content.
+	Will be executed in paralell using multiprocessing to speed up calculations.
+	
+	:param numpy.ndarray covs: the covariates array
+	:param numpy.ndarray lmcoeffs: the coefficients of the linear models (one vector for each voxel)
+	:param numpy.ndarray data: the input image to residualize
+	:param int first_slice: the first slice to processing
+	:param int last_slice: the last slice to process (exclusive)
+	:return: an array containing the residuals of the selected slices
+	:rtype: numpy.ndarray 
+	"""
+	lm = linear_model.LinearRegression()
+	out_size = list(data.shape)
+	out_size[2] = last_slice-first_slice
+	out = np.zeros(tuple(out_size), dtype=np.float32)
+	print(out.shape)
+	print('Processing depth slices ', str(first_slice), ' to ', str(last_slice-1), ' of ', str(data.shape[2]))
+	for k in range(first_slice, last_slice):
+		for j in range(data.shape[1]):
+			for i in range(data.shape[0]):
+				if any(lmcoeffs[k, j, i, :] != 0): # skip empty voxels/space
+					# load fitted linear model coefficients
+					lm.coef_ = lmcoeffs[k, j, i, :4]
+					lm.intercept_ = lmcoeffs[k, j, i, 4]
+					pred = lm.predict(covs)  # calculate prediction for all subjects
+					out[i, j, k-first_slice, 0] = data[i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
+	return out
+
+
+
 class Model:
-
-    @staticmethod
-    def scale_relevance_map(relevance_map, clipping_threshold):
-        """
-        Clips the relevance map to given threshold and adjusts it to range -1...1 float.
-
-        :param numpy.ndarray relevance_map:
-        :param int clipping_threshold: max value to be plotted, larger values will be set to this value
-        :return : The relevance map, clipped to given threshold and adjusted to range -1...1 float.
-        :rtype: numpy.ndarray
-        """
-        if debug: print("Called scale_relevance_map()")
-        r_map = np.copy(relevance_map)  # leave original object unmodified.
-        # perform intensity normalization
-        #scale = np.quantile(np.absolute(r_map), 0.99)
-        scale = 1/100 # multiply by 100
-        if scale != 0:  # fallback if quantile returns zero: directly use abs max instead
-            r_map = (r_map / scale)  # rescale range
-        # corresponding to vmax in plt.imshow; vmin=-vmax used here
-        # value derived empirically here from the histogram of relevance maps
-        r_map[r_map > clipping_threshold] = clipping_threshold  # clipping of positive values
-        r_map[r_map < -clipping_threshold] = -clipping_threshold  # clipping of negative values
-        r_map = r_map / clipping_threshold  # final range: -1 to 1 float
-        return r_map
 
     def set_model(self, new_model_name):
         """
@@ -282,8 +314,6 @@ class Model:
         self.set_subj_img(test_images[subj_id])
         self.set_subj_bg(testdat_bg[subj_id, :, :, :, 0])
 
-        return
-
     def set_subj_img(self, img):
         """
         Sets the model input image and creates relevance map and prediction.
@@ -302,7 +332,7 @@ class Model:
         self.relevance_map = np.reshape(self.relevance_map, self.subj_img.shape[1:4])  # drop first index again
         self.relevance_map = scipy.ndimage.filters.gaussian_filter(self.relevance_map,
                                                                    sigma=0.8)  # smooth activity image
-        self.relevance_map = Model.scale_relevance_map(self.relevance_map, 1)
+        self.relevance_map = scale_relevance_map(self.relevance_map, 1)
         # print(np.max(relevance_map), np.min(relevance_map))
 
     def set_subj_bg(self, bg):
@@ -392,7 +422,7 @@ class Model:
         """
 
         # Perform regression-based covariates cleaning
-        res = np.copy(img_arr)  # residualized image
+        #res = np.copy(img_arr)  # residualized image
         
         self.entered_covariates_df = pd.DataFrame({'Age': [age], 'Sex': [sex], 'TIV': [tiv], 'FieldStrength': [field]})
         print(self.entered_covariates_df)
@@ -411,36 +441,26 @@ class Model:
             # covCN = covariates[labels['Group'] == 0] # only controls as reference group to estimate effect of covariates
             # print("Controls covariates data frame size : ", covCN.shape)
             
-            # multithreading implementation inspired by https://numpy.org/doc/stable/reference/random/multithreading.html
             if self.executor is None:
-                self.executor = concurrent.futures.ThreadPoolExecutor(self.num_threads)
-                self.step_size = np.ceil(res.shape[2] / self.num_threads).astype(int)
+                self.executor = concurrent.futures.ProcessPoolExecutor(self.num_threads) # change to ThreadPoolExecutor for better debugging
+                self.step_size = np.ceil(img_arr.shape[2] / self.num_threads).astype(int)
             
-            def _do_residualize(covs, lmcoeffs, data_in_out, first_slice, last_slice):
-                lm = linear_model.LinearRegression()
-
-                print('Processing depth slices ', str(first_slice), ' to ', str(last_slice), ' of ', str(data_in_out.shape[2]))
-                for k in range(first_slice, last_slice):
-                    for j in range(data_in_out.shape[1]):
-                        for i in range(data_in_out.shape[0]):
-                            if any(lmcoeffs[k, j, i, :] != 0): # skip empty voxels/space
-                                # load fitted linear model coefficients
-                                lm.coef_ = lmcoeffs[k, j, i, :4]
-                                lm.intercept_ = lmcoeffs[k, j, i, 4]
-                                pred = lm.predict(covs)  # calculate prediction for all subjects
-                                data_in_out[i, j, k, 0] = data_in_out[i, j, k, 0] - pred  # % subtract effect of covariates from original values (=calculate residuals)
-            
-            print("Submitting n=", str(self.num_threads), "threads for residualization")
-            futures = {}
+            print("Submitting n=", str(self.num_threads), " parallel workers for residualization")
+            futures = []
             for i in range(self.num_threads):
-                args = (_do_residualize,
-                        covariates,
+                args = (covariates,
                         self.lmarray,
-                        res,
+                        img_arr,
                         i*self.step_size, 
-                        min((i+1)*self.step_size,res.shape[2]))
-                futures[self.executor.submit(*args)] = i
+                        min((i+1)*self.step_size,img_arr.shape[2]))
+                futures.append(self.executor.submit(do_residualize, *args))
             concurrent.futures.wait(futures)
+            if debug:
+                print(futures)
+            results = []
+            for f in futures:
+                results.append(f.result())
+            res = np.concatenate(results, axis=2)
             print("Residualization successful.")
         
         self.uploaded_residual = res

@@ -691,7 +691,7 @@ class View:
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
         self.residualize_button = Button(label="Start residualization and view scan", disabled=True)
         def dummy():
-            print("Test residualize_button.on_click")
+            pass
         self.residualize_button.on_click(dummy) # TODO: remove this once on_click is working when setting callback only from the model class (bug in Bokeh 2.2.x ?)
 
         # Initialize column layout:
