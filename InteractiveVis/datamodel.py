@@ -3,7 +3,6 @@
 import base64
 import glob
 import gzip
-import pickle
 import h5py
 import logging
 import os
@@ -26,7 +25,8 @@ import multiprocessing
 import concurrent.futures # this module was introduced in Python 3.2; use the futures backport module for Python 2.7
 
 from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, \
-    background_images_path, residuals_path, covariates_file, do_model_prefetch, linear_model_path
+    background_images_path, residuals_path, covariates_excel_file, covariates_excel_sheet, \
+    do_model_prefetch, linear_model_path, data_files
 
 if debug:
     print("stored_models = ")
@@ -34,25 +34,35 @@ if debug:
     print("selected_model = ")
     print(selected_model)
 
-# Import covariate data from file
-df = pd.read_pickle(covariates_file)
+# Import data from Excel sheet
+df = pd.read_excel(covariates_excel_file, sheet_name=covariates_excel_sheet, engine='openpyxl')
 
-sid = df['RID']
+sid = df['subject_ID']
 grp = df['Group at scan date (1=CN, 2=EMCI, 3=LMCI, 4=AD, 5=SMC)']
 age = df['Age at scan']
 sex = df['Sex (1=female)']
-tiv = df['TIV']
+tiv = df['TIV_CAT12']
 field = df['MRI_Field_Strength']
 grpbin = (grp > 1)  # 1=CN, ...
 
+numfiles = len(data_files)
+print('Found ', str(numfiles), ' nifti files')
 
-# Load matched covariate information
-with open('matched_cov_idx.pkl', 'rb') as cov_idx_file:
-    # read the data as binary data stream
-    cov_idx = pickle.load(cov_idx_file)
+# Match covariate information
+cov_idx = [-1] * numfiles  # list; array: np.full((numfiles, 1), -1, dtype=int)
+print('Matching covariates for loaded files ...')
+for i, id in enumerate(sid):
+    p = [j for j, x in enumerate(data_files) if
+         re.search('_%04d_' % id, x)]  # translate ID numbers to four-digit numbers, get both index and filename
+    if len(p) == 0:
+        if debug: print('Did not find %04d' % id)  # did not find Excel sheet subject ID in loaded file selection
+    else:
+        if debug: print('Found %04d in %s: %s' % (id, p[0], data_files[p[0]]))
+        cov_idx[p[0]] = i  # store Excel index i for data file index p[0]
+print('Checking for scans not found in Excel sheet: ', sum(x < 0 for x in cov_idx))
 
-labels = pd.DataFrame({'Group':grpbin}).iloc[cov_idx, :]
-grps = pd.DataFrame({'Group':grp, 'RID':sid}).iloc[cov_idx, :]
+labels = pd.DataFrame({'Group': grpbin}).iloc[cov_idx, :]
+grps = pd.DataFrame({'Group': grp, 'RID': sid}).iloc[cov_idx, :]
 
 # Load residualized data from disk:
 hf = h5py.File(residuals_path, 'r')
@@ -69,14 +79,6 @@ logging.getLogger('tensorflow').disabled = True  # disable tensorflow deprecatio
 if debug:
     print("Tensorflow version:")
     print(tf.__version__)
-# from keras.backend.tensorflow_backend import set_session
-# config = tf.ConfigProto(
-#    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1)
-# device_count = {'GPU': 1}
-# )
-# config.gpu_options.allow_growth = True
-# session = tf.Session(config=config)
-# set_session(session)
 
 if disable_gpu_for_tensorflow:
     if debug: print("Disabling GPU computation for Tensorflow...")
@@ -86,10 +88,9 @@ if disable_gpu_for_tensorflow:
 # Split data into training/validation and holdout test data
 labels = to_categorical(np.asarray(labels))
 # circumvent duplicate data:
-idx = np.asarray(range(len(cov_idx)))
-# train_idX,test_idX,train_Y,test_Y = train_test_split(idx, labels, test_size=0.1, stratify = labels, random_state=1)
+idx = np.asarray(range(numfiles))
 test_idX = idx  # select all
-testgrps = grps  # .iloc[test_idX, :]
+testgrps = grps
 print(testgrps)  # prints diagnosis and RID
 print('Distribution of diagnoses in data: [1=CN, 3=LMCI, 4=AD]')
 print(testgrps.Group.value_counts())
@@ -176,14 +177,14 @@ if do_model_prefetch:
         load_model_from_disk_into_cache(model_path)
 
 # load atlas nifti data:
-img = nib.load('aal/aal.nii')
+img = nib.load('aal/aal.nii.gz')
 img_drawn = nib.load('aal/canny_regions_by_border.nii.gz')
 aal_drawn = img_drawn.get_fdata()
 
 x_range_from = 10
 x_range_to = 110  # sagittal
-y_range_from = 10
-y_range_to = 130  # coronal
+y_range_from = 13
+y_range_to = 133  # coronal
 z_range_from = 5
 z_range_to = 105  # axial
 aal = img.get_fdata()[x_range_from:x_range_to, y_range_from:y_range_to, z_range_from:z_range_to]
@@ -198,7 +199,7 @@ if debug:
 
 # load region names into array:
 # region name with id 'i' is stored at index 'i'
-aal_region_names = np.genfromtxt('aal/aal.csv', delimiter=';', usecols=(2), dtype=str, skip_header=1)
+aal_region_names = np.genfromtxt('aal/aal.csv', delimiter=',', usecols=(2), dtype=str, skip_header=1)
 
 
 def get_region_id(axi, sag, cor):
@@ -231,14 +232,14 @@ def scale_relevance_map(relevance_map, clipping_threshold):
 
     :param numpy.ndarray relevance_map:
     :param int clipping_threshold: max value to be plotted, larger values will be set to this value
-    :return : The relevance map, clipped to given threshold and adjusted to range -1...1 float.
+    :return: The relevance map, clipped to given threshold and adjusted to range -1...1 float.
     :rtype: numpy.ndarray
     """
     if debug: print("Called scale_relevance_map()")
     r_map = np.copy(relevance_map)  # leave original object unmodified.
     # perform intensity normalization
     #scale = np.quantile(np.absolute(r_map), 0.99)
-    scale = 1/100 # multiply by 100
+    scale = 1/400 # multiply by 400
     if scale != 0:  # fallback if quantile returns zero: directly use abs max instead
         r_map = (r_map / scale)  # rescale range
     # corresponding to vmax in plt.imshow; vmin=-vmax used here
@@ -286,7 +287,7 @@ class Model:
     def set_model(self, new_model_name):
         """
         Callback for a new model being selected by path/file name.
-        
+
         :param str new_model_name: the path of the new model file to be selected.
         :return: None
         """
@@ -305,7 +306,7 @@ class Model:
     def set_subject(self, subj_id):
         """
         Callback for a new subject being selected by id.
-        
+
         :param int subj_id: the subject to select.
         :return: returns values by modifying instance variables: self.subj_bg, self.subj_img, self.pred, self.relevance_map
         """
@@ -331,10 +332,8 @@ class Model:
         # derive relevance map from CNN model
         self.relevance_map = self.analyzer.analyze(self.subj_img, neuron_selection=selected_neuron)
         self.relevance_map = np.reshape(self.relevance_map, self.subj_img.shape[1:4])  # drop first index again
-        self.relevance_map = scipy.ndimage.filters.gaussian_filter(self.relevance_map,
-                                                                   sigma=0.8)  # smooth activity image
+        self.relevance_map = scipy.ndimage.filters.gaussian_filter(self.relevance_map, sigma=0.8)  # smooth activity image
         self.relevance_map = scale_relevance_map(self.relevance_map, 1)
-        # print(np.max(relevance_map), np.min(relevance_map))
 
     def set_subj_bg(self, bg):
         """
@@ -366,8 +365,8 @@ class Model:
 
         x_range_from = 10
         x_range_to = 110
-        y_range_from = 10
-        y_range_to = 130
+        y_range_from = 13
+        y_range_to = 133
         z_range_from = 5
         z_range_to = 105
 
@@ -405,6 +404,7 @@ class Model:
         print("Successfully loaded uploaded nifti.")
         self.uploaded_bg_img = img_arr
         return img_arr
+
 
     def residualize(self, img_arr, age=73, sex=0.498181818, tiv=1409, field=2.859090909):
         """

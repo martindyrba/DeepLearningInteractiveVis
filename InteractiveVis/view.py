@@ -31,7 +31,7 @@ class View:
     def update_region_div(self):
         """
         Called upon change of slider positions.
-        
+
         Obtains selected region ID from current slider positions and updates the region Div
         with the region name corresponding to the region ID.
         :return: None
@@ -667,9 +667,9 @@ class View:
         self.cluster_peak_div = Div(text="Peak Intensity: " + "0", css_classes=["cluster_divs"])
 
         # see InteractiveVis/static/ for default formatting/style definitions
-        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
+        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
         self.sex_select = Select(title="Sex:", value="N/A", options=["male", "female", "N/A"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
         self.field_strength_select = Select(title="Field Strength [T]:", value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
 
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
@@ -687,7 +687,6 @@ class View:
         self.color_mapper = LinearColorMapper(palette=jet_color_palette, low=-1, high=1)
         self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
-        
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
         self.residualize_button = Button(label="Start residualization and view scan", disabled=True)
         def dummy():

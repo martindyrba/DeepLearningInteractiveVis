@@ -1,0 +1,276 @@
+---
+title: "Hippocampus volume and relevance analysis"
+author: "Martin Dyrba"
+date: "12 May 2021"
+output: 
+  html_document: 
+    fig_width: 9
+    fig_height: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading and preparing the data
+
+```{r}
+# read the Excel sheet containing data
+library(readxl)
+Hippocampus_values <- as.data.frame(read_excel("hippocampus_volume_relevance_ADNI2.xlsx", sheet="ADNI2_LRP_CMP"))
+colnames(Hippocampus_values)[colnames(Hippocampus_values)=="Group at scan date (1=CN, 2=EMCI, 3=LMCI, 4=AD, 5=SMC)"] <- "Group"
+Hippocampus_values$Group <- factor(Hippocampus_values$Group, levels=c(1,3,4), labels=c("CN", "MCI", "AD"))
+#View(Hippocampus_values)
+# rescale volume from mm³ to ml; the same units as GMvol and TIV
+Hippocampus_values$aal_hippocampus <- Hippocampus_values$aal_hippocampus / 1000
+# add columns brain excluding hippocampus or temporal lobe
+Hippocampus_values$sum_relevance_brain_wo_hippocampus <- Hippocampus_values$sum_relevance_brain - Hippocampus_values$sum_relevance_hippocampus
+Hippocampus_values$sum_relevance_brain_wo_temporal <- Hippocampus_values$sum_relevance_brain - Hippocampus_values$sum_relevance_temporal
+
+# get cross-validation fold IDs
+test_ids <- read.csv("test_set_rids.csv")
+# check for completeness and ensure only unique entries
+stopifnot(length(na.omit(unique(as.vector(as.matrix(test_ids))))) == nrow(Hippocampus_values))
+
+# match cross-validation folds and subject IDs
+folds <- rep_len(-1,nrow(Hippocampus_values))
+for (i in seq_len(10)) {
+  # match IDs to get their index and put respective fold number in folds vector
+  folds[match(test_ids[,i],Hippocampus_values$subject_ID)] <- i
+}
+
+#####
+# residualize the hippocampus volumes with same covariates as used for the gray matter maps before
+# fit linear model for controls only
+hp_lm <- lm(`aal_hippocampus` ~ `Age at scan` + `Sex (1=female)` + `TIV_CAT12` + `MRI_Field_Strength`, data = subset(Hippocampus_values, subset = Group=="CN"))
+summary(hp_lm)
+GMvol_lm <- lm(`GMvol` ~ `Age at scan` + `Sex (1=female)` + `TIV_CAT12` + `MRI_Field_Strength`, data = subset(Hippocampus_values, subset = Group=="CN"))
+
+# estimate residuals for all cases
+hipp_vol_res <- Hippocampus_values$aal_hippocampus - predict(hp_lm, newdata = Hippocampus_values)
+GMvol_res <- Hippocampus_values$GMvol - predict(GMvol_lm, newdata = Hippocampus_values)
+```
+
+
+## Correlation of hippocampus volume residuals and hippocampus LRP values
+
+```{r}
+# first, remove outliers from all "Sum_relevance_*" columns, i.e. set those values to NA
+#  adapted from https://statisticsglobe.com/remove-outliers-from-data-set-in-r
+remove_outliers <- function(dat, cols) {
+  for (c in cols) {
+    dat[dat[,c] %in% boxplot.stats(dat[,c])$out, c] <- NA
+  }
+  return(dat)
+}
+Hippocampus_values <- remove_outliers(Hippocampus_values, grep("Sum_relevance", colnames(Hippocampus_values)))
+
+print(cor(hipp_vol_res, Hippocampus_values$sum_relevance_hippocampus, use="pairwise.complete.obs"))
+  correls_cv_hipp <- sapply(grep("Sum_relevance_hippocampus_cv", colnames(Hippocampus_values)), function(x) do.call(cor, list(x=Hippocampus_values[,x], y=hipp_vol_res, use="pairwise.complete.obs")))
+  summary(correls_cv_hipp)
+```
+
+```{r}
+# scatter plot bilateral vol vs. rel
+par(mar=c(4,4,1,0), oma=c(0,0,0,0))
+pchs<-c(16, 15, 17)
+mycolors <- c("#111111", "#61D04F", "#2297E6")
+
+lm_both <- lm(hipp_vol_res~Hippocampus_values$sum_relevance_hippocampus) # keeps scale and intercept
+cor_both <- cor.test(hipp_vol_res, Hippocampus_values$sum_relevance_hippocampus) # same as beta of lm(scale(vol_res),scale(act))
+plot(jitter(Hippocampus_values$sum_relevance_hippocampus, factor=200), hipp_vol_res,
+     cex = 0.7, pch=pchs[Hippocampus_values$Group], col=mycolors[Hippocampus_values$Group],
+     axes = FALSE,
+     xlab = "Total relevance of hippocampus voxels", ylab = "Bilateral hippocampus volume (residuals, ml)",
+     main = "Correlation of hippocampus volume and CNN relevance scores")
+legend(x = "topright", legend=c("Normal", "MCI", "AD"), col=mycolors, pch=c(16,15,17), bty="n")
+axis(1, at=NULL, labels=T)
+axis(2, at=NULL, labels=T)
+abline(a=lm_both$coefficients[1], b=lm_both$coefficients[2], col="red")
+text(x=1.3, y=-4.1, labels=paste0("r = ", round(cor_both$estimate, digits=2),
+                                 ", p ", ifelse(cor_both$p.value<0.001, "< 0.001", paste0("= ", round(cor_both$estimate, digits=2))),
+                                 ", R² = ", round(summary(lm_both)$r.squared, digits=2),
+                                 ", n = ", cor_both$parameter+2), col="red")
+```
+
+
+## Additional plots for sensitivity analysis
+
+```{r echo=FALSE}
+# scatter plot of HP vol vs. rel brain
+lm_both <- lm(hipp_vol_res~Hippocampus_values$sum_relevance_brain) # keeps scale and intercept
+cor_both <- cor.test(hipp_vol_res, Hippocampus_values$sum_relevance_brain) # same as beta of lm(scale(vol_res),scale(act))
+plot(jitter(Hippocampus_values$sum_relevance_brain, factor=200), hipp_vol_res,
+     cex = 0.7, pch=pchs[Hippocampus_values$Group], col=mycolors[Hippocampus_values$Group],
+     axes = FALSE,
+     xlab = "Total relevance of gray matter voxels", ylab = "Bilateral hippocampus volume (residuals, ml)",
+     main = "Correlation of hippocampus volume and CNN gray matter relevance scores")
+legend(x = "topright", legend=c("Normal", "MCI", "AD"), col=c(1,3,4), pch=c(16,15,17), bty="n")
+axis(1, at=NULL, labels=T)
+axis(2, at=NULL, labels=T)
+abline(a=lm_both$coefficients[1], b=lm_both$coefficients[2], col="red")
+text(x=20, y=-4.1, labels=paste0("r = ", round(cor_both$estimate, digits=2),
+                                  ", p ", ifelse(cor_both$p.value<0.001, "< 0.001", paste0("= ", round(cor_both$estimate, digits=2))),
+                                  ", R² = ", round(summary(lm_both)$r.squared, digits=2),
+                                  ", n = ", cor_both$parameter+2), col="red")
+
+# scatter plot of HP vol vs. rel brain w/o hippocampus
+lm_both <- lm(hipp_vol_res~Hippocampus_values$sum_relevance_brain_wo_hippocampus) # keeps scale and intercept
+cor_both <- cor.test(hipp_vol_res, Hippocampus_values$sum_relevance_brain_wo_hippocampus) # same as beta of lm(scale(vol_res),scale(act))
+plot(jitter(Hippocampus_values$sum_relevance_brain_wo_hippocampus, factor=200), hipp_vol_res,
+     cex = 0.7, pch=pchs[Hippocampus_values$Group], col=mycolors[Hippocampus_values$Group],
+     axes = FALSE,
+     xlab = "Total relevance of gray matter voxels excluding hippocampus", ylab = "Bilateral hippocampus volume (residuals, ml)",
+     main = "Correlation of hippocampus volume and CNN gray matter relevance scores excluding\nhippocampus")
+legend(x = "topright", legend=c("Normal", "MCI", "AD"), col=c(1,3,4), pch=c(16,15,17), bty="n")
+axis(1, at=NULL, labels=T)
+axis(2, at=NULL, labels=T)
+abline(a=lm_both$coefficients[1], b=lm_both$coefficients[2], col="red")
+text(x=20, y=-4.1, labels=paste0("r = ", round(cor_both$estimate, digits=2),
+                                  ", p ", ifelse(cor_both$p.value<0.001, "< 0.001", paste0("= ", round(cor_both$estimate, digits=2))),
+                                  ", R² = ", round(summary(lm_both)$r.squared, digits=2),
+                                  ", n = ", cor_both$parameter+2), col="red")
+
+# scatter plot of HP vol vs. rel brain w/o temporal lobe
+lm_both <- lm(hipp_vol_res~Hippocampus_values$sum_relevance_brain_wo_temporal) # keeps scale and intercept
+cor_both <- cor.test(hipp_vol_res, Hippocampus_values$sum_relevance_brain_wo_temporal) # same as beta of lm(scale(vol_res),scale(act))
+plot(jitter(Hippocampus_values$sum_relevance_brain_wo_temporal, factor=200), hipp_vol_res,
+     cex = 0.7, pch=pchs[Hippocampus_values$Group], col=mycolors[Hippocampus_values$Group],
+     axes = FALSE,
+     xlab = "Total relevance of gray matter voxels excluding temporal lobe", ylab = "Bilateral hippocampus volume (residuals, ml)",
+     main = "Correlation of hippocampus volume and CNN gray matter relevance scores excluding\ntemporal lobe")
+legend(x = "topright", legend=c("Normal", "MCI", "AD"), col=c(1,3,4), pch=c(16,15,17), bty="n")
+axis(1, at=NULL, labels=T)
+axis(2, at=NULL, labels=T)
+abline(a=lm_both$coefficients[1], b=lm_both$coefficients[2], col="red")
+text(x=20, y=-4.1, labels=paste0("r = ", round(cor_both$estimate, digits=2),
+                            ", p ", ifelse(cor_both$p.value<0.001, "< 0.001", paste0("= ", round(cor_both$estimate, digits=2))),
+                            ", R² = ", round(summary(lm_both)$r.squared, digits=2),
+                            ", n = ", cor_both$parameter+2), col="red")
+```
+
+
+## Correlation matrix of hippocampus volume and relevance scores stratified by brain lobes
+
+```{r}
+# create new data frame for all values
+dat <- data.frame("RID"=Hippocampus_values$subject_ID,
+                 "HP_vol_res"=hipp_vol_res,
+                 "GM_vol_res"=GMvol_res,
+                 "LRP_hipp"=Hippocampus_values$sum_relevance_hippocampus,
+                 "LRP_brain"=Hippocampus_values$sum_relevance_brain,
+                 #"LRP_brain_w/o_hipp"=Hippocampus_values$sum_relevance_brain_wo_hippocampus,
+                 #"LRP_brain_w/o_temporal"=Hippocampus_values$sum_relevance_brain_wo_temporal,
+                 "LRP_temporal"=Hippocampus_values$sum_relevance_temporal,
+                 "LRP_occipital"=Hippocampus_values$sum_relevance_occipital,
+                 "LRP_frontal"=Hippocampus_values$sum_relevance_frontal,
+                 "LRP_parietal"=Hippocampus_values$sum_relevance_parietal,
+                 "LRP_insula_cingulate"=Hippocampus_values$sum_relevance_insula_cingulate,
+                 "LRP_basal_ganglia"=Hippocampus_values$sum_relevance_basal_ganglia,
+                 "LRP_cerebellum"=Hippocampus_values$sum_relevance_cerebellum,
+                 "group"=Hippocampus_values$Group,
+                 "Amy_status"=Hippocampus_values$`Amy SUVR Pos`,
+                 "group_bin"=(Hippocampus_values$Group!="CN")+0,
+                 "fold"=folds)
+
+#####
+# create correlation matrix plots to evaluate relevance location and sensitivity for hippocampus volume
+library(Hmisc)
+library(corrplot)
+
+dat2 <- subset(dat, select = grep("LRP_",colnames(dat)))
+dat2 <- cbind(unclass(dat$group), dat$HP_vol_res, dat2)
+colnames(dat2)[c(1,2)] <- c("Group", "Hipp_vol_res")
+res2 <- rcorr(data.matrix(dat2))
+
+par(oma=c(0,0,4,0), xpd=NA)
+corrplot(res2$r, p.mat = res2$P, type = "upper", tl.col = "black", tl.srt = 45, sig.level = 0.001, insig = "blank", tl.pos = "lt")
+corrplot(res2$r, add = TRUE, type = "lower", method = "number", col = "black", diag = FALSE, tl.pos = "n", cl.pos = "n", number.cex=0.8)
+```
+
+
+## Group separation for hippocampus volume
+
+```{r}
+require(pROC)
+# helper function to obtain values for respective group (MCI or AD) and fold (1,2,...)
+get.values <- function(fld, grp) {
+    # derive optimal threshold from training data
+    myroc.train <- roc(group~HP_vol_res, levels=c("CN",grp), direction=">",
+                       data=subset(dat, subset=((dat$group=="CN" | dat$group==grp) & dat$fold!=fld)))
+    thr <- coords(myroc.train, x="best", input="threshold", ret="thr", best.method="youden", transpose=T)
+    # get confusion matrix for test data using threshold
+    testdat <- subset(dat, subset=((dat$group=="CN" | dat$group==grp) & dat$fold==fld))
+    testdat$pred <- (testdat$HP_vol_res<thr)+0
+    confmat <- xtabs(~group+pred, data=testdat)[c("CN",grp),] # subset(testdat, subset=testdat$Amy_status==testdat$group_bin)) # mimic CNN analysis were model is estimated also including all people, and amyloid stratification being applied post-hoc
+    stopifnot(nrow(confmat)==2, ncol(confmat)==2)
+    tn <- confmat[1,1]; fp <- confmat[1,2]; fn <- confmat[2,1]; tp <- confmat[2,2]
+    sen = tp / (tp+fn)
+    spec = tn / (fp+tn)
+    ppv = tp / (tp+fp)
+    npv = tn / (tn+fn)
+    f1 = 2 * ((ppv * sen) / (ppv + sen))
+    bacc = (spec + sen) / 2
+    # additionally calculate AUC for test data
+    auc.test <- auc(roc(group~HP_vol_res, levels=c("CN",grp), direction=">", data=testdat)) # subset(testdat, subset=testdat$Amy_status==testdat$group_bin))) # mimic CNN analysis were model is estimated also including all people, and amyloid stratification being applied post-hoc
+    # return result metrics
+    return(data.frame(Threshold=thr, AUC=as.numeric(auc.test), Balanced_Accuracy=bacc, Sensitivity=sen, Specificity=spec, PPV=ppv, NPV=npv, F1=f1, Fold=fld))
+}
+
+# AUC for hippocampus residuals for whole sample
+myroc.ad <- roc(group~HP_vol_res, levels=c("CN","AD"), direction=">",
+                data=subset(dat,subset=(dat$group!="MCI") ))
+plot(myroc.ad, col=mycolors[3])
+text(x=0, y=0.05, labels=paste0("AD: AUC = ", round(auc(myroc.ad), digits=3)), col=mycolors[3])
+print(auc(myroc.ad))
+#print(ci.auc(myroc.ad, method='bootstrap'))
+results.ad <- do.call(rbind, lapply(seq_len(10), get.values, grp="AD"))
+results.mean.ad <- cbind(colMeans(results.ad), apply(results.ad, 2, sd))[-9,] # omit fold numbers
+colnames(results.mean.ad) <- c("mean", "sd")
+print(results.mean.ad)
+
+myroc.mci <- roc(group~HP_vol_res, levels=c("CN","MCI"), direction=">",
+                 data=subset(dat,subset=(dat$group!="AD") ))# & (dat$Amy_status==dat$group_bin)))
+plot(myroc.mci, col=mycolors[2], add=T)
+text(x=0, y=0, labels=paste0("MCI: AUC = ", round(auc(myroc.mci), digits=3)), col=mycolors[2])
+legend(x = "topright", legend=c("AD","MCI"), col=mycolors[c(3,2)], pch=15, bty="n")
+print(auc(myroc.mci))
+#print(ci.auc(myroc.mci, method='bootstrap'))
+results.mci <- do.call(rbind, lapply(seq_len(10), get.values, grp="MCI"))
+results.mean.mci <- cbind(colMeans(results.mci), apply(results.mci, 2, sd))[-9,] # omit fold numbers
+colnames(results.mean.mci) <- c("mean", "sd")
+print(results.mean.mci)
+```
+
+### Simple boxplots for hippocampus volume residuals
+
+```{r}
+# select best cutpoint based on ROC curve
+thr.mci <- coords(myroc.mci, x="best", input="threshold", ret=c("thr", "acc", "sens", "spec"), best.method="youden", transpose=T)
+print(thr.mci)
+thr.ad <- coords(myroc.ad, x="best", input="threshold", ret=c("thr", "acc", "sens", "spec"), best.method="youden", transpose=T)
+print(thr.ad)
+boxplot(HP_vol_res~factor(group, labels=c("CN","MCI","AD")), data=dat, col=c(8,3,4), xlab="Group", ylab="Bilateral hippocampus volume (residuals, ml)") #gray-green-blue colors
+```
+
+### Violin plots for hippocampus volume residuals
+
+```{r}
+library(ggplot2)
+mycolors <- c("gray", "#61D04F", "#2297E6")
+
+# group separation by hippocampus volume (residualized)
+p <- ggplot(dat, aes(x=factor(group, labels=c("CN", "MCI", "AD")), y=HP_vol_res)) +
+  geom_violin() +
+  geom_hline(aes(yintercept=thr.mci[1], color="red"), linetype="dashed") +
+  geom_hline(aes(yintercept=thr.ad[1], color="red")) +
+  labs(x="Groups", y="Bilateral hippocampus volume (residuals, ml)", 
+       title="Distribution of hippocampus volume") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_boxplot(width=0.2, aes(fill=factor(group))) +
+  scale_fill_manual(values=mycolors) +
+  theme(legend.position="none") +
+  annotate(geom="text", x=3.1, y=2.4, label=paste0("— Threshold for AD: < ",round(thr.ad[1], digits=3)), color="red") +
+  annotate(geom="text", x=3.1, y=2.7, label=paste0("- - Threshold for MCI: < ",round(thr.mci[1], digits=3)), color="red")
+plot(p)
+```
