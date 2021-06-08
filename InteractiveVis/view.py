@@ -20,10 +20,14 @@ from datamodel import sorted_xs, stored_models, selected_model, get_region_name,
     sex, tiv, field
 from config import debug, flip_left_right_in_frontal_plot
 
-# Adjusted global color palette for ColorBar annotation, because bokeh does not support 'jet' palette by default:
-jet_color_palette = []
+# Adjusted global color palette for ColorBar annotation, because bokeh does not support some palettes by default:
+overlay_colormap = cm.get_cmap('RdYlGn_r')
+color_palette = []
 for i in range(0, 256):
-    jet_color_palette.append(rgb2hex(cm.jet(i)))
+    color_palette.append(rgb2hex(overlay_colormap(i)))
+relevance_guide_color_pos = "#d22a40" # red
+relevance_guide_color_neg = "#429e5a" # green # previous: "#36689b" -> dark blue
+cluster_size_histogram_color = "#0984ca"
 
 
 class View:
@@ -31,7 +35,7 @@ class View:
     def update_region_div(self):
         """
         Called upon change of slider positions.
-        
+
         Obtains selected region ID from current slider positions and updates the region Div
         with the region name corresponding to the region ID.
         :return: None
@@ -172,7 +176,7 @@ class View:
         alpha_mask = np.copy(relevance_map)
         alpha_mask[np.abs(alpha_mask) > 0] = alpha  # final transparency of visible content
         relevance_map = relevance_map / 2 + 0.5  # range 0-1 float
-        ovl = np.uint8(cm.jet(relevance_map) * 255)  # cm translates range 0 - 255 uint to rgba array
+        ovl = np.uint8(overlay_colormap(relevance_map) * 255)  # cm translates range 0 - 255 uint to rgba array
         ovl[:, :, :, 3] = np.uint8(alpha_mask * 255)  # replace alpha channel (fourth dim) with calculated values
         ret = ovl.view("uint32").reshape(ovl.shape[:3])  # convert to 3D array of uint32
         return ret
@@ -215,6 +219,19 @@ class View:
         """
         self.rendered_overlay = View.overlay2rgba(self.overlay, alpha=1 - self.transparency_slider.value)
 
+    def update_cluster_sizes_histogram(self):
+        if self.firstrun:
+            # initialize/create plots
+            # calc histogram; clip high values to slider max (=200)
+            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            self.hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat,
+                                                    left=edges[:-1], right=edges[1:], fill_color=cluster_size_histogram_color,
+                                                    line_color=cluster_size_histogram_color, name="hist_cluster_sizes")
+        else:  # update plots
+            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
+            self.hist_frontal.data_source.data = {'bottom': np.zeros(histdat.shape, dtype=int), 'top': histdat,
+                                                  'left': edges[:-1], 'right': edges[1:]}
+
     def update_guide_frontal(self):
         """
         Called if new subject has been selected or the threshold/clustersize sliders have been modified.
@@ -227,27 +244,19 @@ class View:
         if self.firstrun:
             # initialize/create plots
             self.guide_frontal.line(x, y0, color="#000000")
-            self.pos_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_pos_frontal, y2=y0, fill_color="#d22a40",
+            self.pos_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_pos_frontal, y2=y0, fill_color=relevance_guide_color_pos,
                                                              fill_alpha=0.8, name="pos_area_frontal")
-            self.pos_line_frontal = self.guide_frontal.line(x, y=self.sum_pos_frontal, line_width=2, color="#d22a40",
+            self.pos_line_frontal = self.guide_frontal.line(x, y=self.sum_pos_frontal, line_width=2, color=relevance_guide_color_pos,
                                                             name="pos_line_frontal")
-            self.neg_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_neg_frontal, y2=y0, fill_color="#36689b",
+            self.neg_area_frontal = self.guide_frontal.varea(x=x, y1=self.sum_neg_frontal, y2=y0, fill_color=relevance_guide_color_neg,
                                                              fill_alpha=0.8, name="neg_area_frontal")
-            self.neg_line_frontal = self.guide_frontal.line(x, y=self.sum_neg_frontal, line_width=2, color="#36689b",
+            self.neg_line_frontal = self.guide_frontal.line(x, y=self.sum_neg_frontal, line_width=2, color=relevance_guide_color_neg,
                                                             name="neg_line_frontal")
-            # calc histogram; clip high values to slider max (=200)
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_frontal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat,
-                                                    left=edges[:-1], right=edges[1:], fill_color="blue",
-                                                    line_color="blue", name="hist_frontal")
         else:  # update plots
             self.pos_area_frontal.data_source.data = {'x': x, 'y1': self.sum_pos_frontal, 'y2': y0}
             self.pos_line_frontal.data_source.data = {'x': x, 'y': self.sum_neg_frontal}
             self.neg_area_frontal.data_source.data = {'x': x, 'y1': self.sum_neg_frontal, 'y2': y0}
             self.neg_line_frontal.data_source.data = {'x': x, 'y': self.sum_neg_frontal}
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_frontal.data_source.data = {'bottom': np.zeros(histdat.shape, dtype=int), 'top': histdat,
-                                                  'left': edges[:-1], 'right': edges[1:]}
 
     def update_guide_axial(self):
         """
@@ -262,27 +271,19 @@ class View:
         if self.firstrun:
             # initialize/create plots
             self.guide_axial.line(x, y0, color="#000000")
-            self.pos_area_axial = self.guide_axial.varea(x=x, y1=self.sum_pos_axial, y2=y0, fill_color="#d22a40",
+            self.pos_area_axial = self.guide_axial.varea(x=x, y1=self.sum_pos_axial, y2=y0, fill_color=relevance_guide_color_pos,
                                                          fill_alpha=0.8, name="pos_area_axial")
-            self.pos_line_axial = self.guide_axial.line(x, y=self.sum_pos_axial, line_width=2, color="#d22a40",
+            self.pos_line_axial = self.guide_axial.line(x, y=self.sum_pos_axial, line_width=2, color=relevance_guide_color_pos,
                                                         name="pos_line_axial")
-            self.neg_area_axial = self.guide_axial.varea(x=x, y1=self.sum_neg_axial, y2=y0, fill_color="#36689b",
+            self.neg_area_axial = self.guide_axial.varea(x=x, y1=self.sum_neg_axial, y2=y0, fill_color=relevance_guide_color_neg,
                                                          fill_alpha=0.8, name="neg_area_axial")
-            self.neg_line_axial = self.guide_axial.line(x, y=self.sum_neg_axial, line_width=2, color="#36689b",
+            self.neg_line_axial = self.guide_axial.line(x, y=self.sum_neg_axial, line_width=2, color=relevance_guide_color_neg,
                                                         name="neg_line_axial")
-            # calc histogram; clip high values to slider max (=200)
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_axial = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat,
-                                                  left=edges[:-1], right=edges[1:], fill_color="blue",
-                                                  line_color="blue", name="hist_axial")
         else:  # update plots
             self.pos_area_axial.data_source.data = {'x': x, 'y1': self.sum_pos_axial, 'y2': y0}
             self.pos_line_axial.data_source.data = {'x': x, 'y': self.sum_neg_axial}
             self.neg_area_axial.data_source.data = {'x': x, 'y1': self.sum_neg_axial, 'y2': y0}
             self.neg_line_axial.data_source.data = {'x': x, 'y': self.sum_neg_axial}
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_axial.data_source.data = {'bottom': np.zeros(histdat.shape, dtype=int), 'top': histdat,
-                                                'left': edges[:-1], 'right': edges[1:]}
 
     def update_guide_sagittal(self):
         """
@@ -298,28 +299,20 @@ class View:
             # initialize/create plots
             self.guide_sagittal.line(x, y0, color="#000000")
             self.pos_area_sagittal = self.guide_sagittal.varea(x=x, y1=self.sum_pos_sagittal, y2=y0,
-                                                               fill_color="#d22a40", fill_alpha=0.8,
+                                                               fill_color=relevance_guide_color_pos, fill_alpha=0.8,
                                                                name="pos_area_sagittal")
-            self.pos_line_sagittal = self.guide_sagittal.line(x, y=self.sum_pos_sagittal, line_width=2, color="#d22a40",
+            self.pos_line_sagittal = self.guide_sagittal.line(x, y=self.sum_pos_sagittal, line_width=2, color=relevance_guide_color_pos,
                                                               name="pos_line_sagittal")
             self.neg_area_sagittal = self.guide_sagittal.varea(x=x, y1=self.sum_neg_sagittal, y2=y0,
-                                                               fill_color="#36689b", fill_alpha=0.8,
+                                                               fill_color=relevance_guide_color_neg, fill_alpha=0.8,
                                                                name="neg_area_sagittal")
-            self.neg_line_sagittal = self.guide_sagittal.line(x, y=self.sum_neg_sagittal, line_width=2, color="#36689b",
+            self.neg_line_sagittal = self.guide_sagittal.line(x, y=self.sum_neg_sagittal, line_width=2, color=relevance_guide_color_neg,
                                                               name="neg_line_sagittal")
-            # calc histogram; clip high values to slider max (=200)
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_sagittal = self.clusthist.quad(bottom=np.zeros(histdat.shape, dtype=int), top=histdat,
-                                                     left=edges[:-1], right=edges[1:], fill_color="blue",
-                                                     line_color="blue", name="hist_sagittal")
         else:  # update plots
             self.pos_area_sagittal.data_source.data = {'x': x, 'y1': self.sum_pos_sagittal, 'y2': y0}
             self.pos_line_sagittal.data_source.data = {'x': x, 'y': self.sum_neg_sagittal}
             self.neg_area_sagittal.data_source.data = {'x': x, 'y1': self.sum_neg_sagittal, 'y2': y0}
             self.neg_line_sagittal.data_source.data = {'x': x, 'y': self.sum_neg_sagittal}
-            [histdat, edges] = np.histogram(np.clip(self.clust_sizes, a_min=None, a_max=200), bins=self.clust_hist_bins)
-            self.hist_sagittal.data_source.data = {'bottom': np.zeros(histdat.shape, dtype=int), 'top': histdat,
-                                                   'left': edges[:-1], 'right': edges[1:]}
 
     def render_backround(self):
         """
@@ -667,9 +660,9 @@ class View:
         self.cluster_peak_div = Div(text="Peak Intensity: " + "0", css_classes=["cluster_divs"])
 
         # see InteractiveVis/static/ for default formatting/style definitions
-        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
+        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
         self.sex_select = Select(title="Sex:", value="N/A", options=["male", "female", "N/A"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=0, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
         self.field_strength_select = Select(title="Field Strength [T]:", value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
 
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
@@ -684,10 +677,9 @@ class View:
         self.p_color_bar.x_range.range_padding = 0
         self.p_color_bar.y_range.range_padding = 0
 
-        self.color_mapper = LinearColorMapper(palette=jet_color_palette, low=-1, high=1)
+        self.color_mapper = LinearColorMapper(palette=color_palette, low=-1, high=1)
         self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
-        
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
         self.residualize_button = Button(label="Start residualization and view scan", disabled=True)
         def dummy():

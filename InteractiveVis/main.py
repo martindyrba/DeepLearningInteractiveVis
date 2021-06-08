@@ -135,6 +135,7 @@ def select_subject_worker():
     v.p_sagittal.title.text = " "
     v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
+    v.update_cluster_sizes_histogram()
 
     v.update_guide_frontal()
     v.update_guide_axial()
@@ -215,6 +216,7 @@ def apply_thresholds_callback(attr, old, new):
     if debug: print("Called apply_thresholds_callback().")
 
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
+    v.update_cluster_sizes_histogram()
     v.update_guide_frontal()
     v.update_guide_axial()
     v.update_guide_sagittal()
