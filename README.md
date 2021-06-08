@@ -1,10 +1,10 @@
 # Deep Learning Interactive Visualization
 
-This project contains all code to learn a deep learning model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
-The model structure has higher stability for whole-brain data as the first model which used only on hippocampal coronal slices as input (reduced field-of-view).  
-Publishing of the results is submitted (Dec. 2020). You can find the preprint on [arXiv:2012.10294](https://arxiv.org/abs/2012.10294)
+This project contains all code to learn a convolutional neural network model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
+ 
+Publishing of the results is in revision (May 2021). You can find the preprint on [arXiv:2012.10294](https://arxiv.org/abs/2012.10294)
 
-![Screenshot of the InteractiveVis app](Screenshot_InteractiveVis.png)*Screenshot of the InteractiveVis app*
+![Screenshot of the InteractiveVis app](InteractiveVis.png)*Screenshot of the InteractiveVis app*
 
 
 ***
@@ -13,26 +13,24 @@ Publishing of the results is submitted (Dec. 2020). You can find the preprint on
 
 ### Running the interactive visualization
 
-The interactive bokeh application [InteractiveVis](InteractiveVis) can be run for inspecting the created relevance maps overlaid on the original input images.
+The interactive Bokeh web application [InteractiveVis](InteractiveVis) can be used for deriving and inspecting the relevance maps overlaid on the original input images.
 
 To run it, there are three options.
 
-1. We set up a public web service to quickly try it out: [https://explaination.net/InteractiveVis](https://explaination.net/InteractiveVis)
+1. **We set up a public web service to quickly try it out:** <https://explaination.net/demo>
 
-2. Alternatively download the docker container from DockerHub: ```sudo docker pull martindyrba/interactivevis```
-Then use the scripts ```sudo ./run_docker_intvis.sh``` and ```sudo ./stop_docker_intvis.sh``` to run or stop the Bokeh app. (You find both files above in this repository.)  
-After starting the docker container, the app will be available from your web browser: [http://localhost:5006/InteractiveVis](http://localhost:5006/InteractiveVis)
+2. Alternatively, download the docker container from DockerHub: `sudo docker pull martindyrba/interactivevis`
+Then use the scripts `sudo ./run_docker_intvis.sh` and `sudo ./stop_docker_intvis.sh` to run or stop the Bokeh app. (You find both files above in this repository.)  
+After starting the docker container, the app will be available from your web browser: <http://localhost:5006/InteractiveVis>
 
-3. Download this Git repository. Install the required Python modules (see below). Then point the anaconda prompt to the DeepLearningInteractiveVis main directory and run the Bokeh app using:
-```
-bokeh serve InteractiveVis --show
-```
+3. Download this Git repository. Install the required Python modules (see below). Then point the Anaconda prompt or terminal console to the DeepLearningInteractiveVis main directory and run the Bokeh app using:
+`bokeh serve InteractiveVis --show`
 
 
 
 ### Requirements and installation:
 
-To be able to run the interactive visualization, you need Python 2 or 3 (specifically Python <3.8, in order to install tensorflow==1.15)  
+To be able to run the interactive visualization from the Git sources, you will need Python 2 or 3 (specifically Python <3.8, in order to install tensorflow==1.15).
 Note: on some systems it is recommended to install some dependencies using the default package manager instead of pip. e.g.
 `sudo apt-get install python-numpy python-scipy python-tk`
 or
@@ -55,14 +53,16 @@ Then you can start the Bokeh application as indicated above.
 The code for training the CNN models and evaluation is provided in this repository.  
 The order of script execution was as follows:
 
-1. [CreateResiduals-ADNI2-StoreModels.ipynb](CreateResiduals-ADNI2-StoreModels.ipynb) and other scripts for the validation samples [CreateResiduals-ADNI3.ipynb](CreateResiduals-ADNI3.ipynb) (execution time: each 15-30 minutes)
-2. [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_dr0.1.ipynb) for model training based on twenty-fold cross-validation to evaluate general model accuracy (execution time: 2-10 hrs with CUDA-GPU?)
-3. [CalcAccuracyPerGroup_ADNI2.ipynb](CalcAccuracyPerGroup_ADNI2.ipynb) and [CalcAccuracyPerGroup_ADNI2_Amy.ipynb](CalcAccuracyPerGroup_ADNI2_Amy.ipynb) to calculate the accuracy/AUC per comparison MCI vs. CN and AD vs. CN
-4. [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationADNI3_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationADNI3_dr0.1.ipynb), [DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationAIBL_dr0.1.ipynb](DeepLearning3DxVal_wb_win_mwp1_MNI_newStructure_validationAIBL_dr0.1.ipynb) for calculating model performance on the validation datasets (execution time: each 0.5-1 hr with CUDA-GPU?)
-5. [extract_hippocampal_activation_newmodel.ipynb](extract_hippocampal_activation_newmodel.ipynb) to extract the hippocampal activity for all CV models (execution time: 10 minutes with CUDA-GPU)
-6. [extract_relevance_maps_as_nifti.ipynb](extract_relevance_maps_as_nifti.ipynb) to extract the relevance map overlays as nifti file for all participants/scans for a single model (execution time: 30 minutes with CUDA-GPU)
-7. [CreateDemoDataset.ipynb](CreateDemoDataset.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
-
+- [1_CreateResiduals_ADNI2_StoreModels.ipynb](1_CreateResiduals_ADNI2_StoreModels.ipynb) and other scripts for the validation samples [4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb](4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb) (execution time: each 15-30 minutes).
+- [2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) for model training based on tenfold cross-validation to evaluate general model accuracy for the residualized data (execution time: 2-10 hrs with CUDA-GPU) and [3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb](3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb) for training the model based on the whole ADNI-GO/2 dataset.
+- [5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) and [6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb](6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
+- [7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) and [8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb](8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb) for training the models for the raw datasets (execution time: each 2-10 hrs with CUDA-GPU).
+- [9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb](9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb) and [9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
+- [x_extract_hippocampus_relevance_lrpCMP_DELCODE.ipynb](x_extract_hippocampus_relevance_lrpCMP_DELCODE.ipynb) to extract the hippocampus relevance for all models (execution time: 15-30 minutes with CUDA-GPU).
+- [x_extract_relevance_maps_as_nifti_DELCODE.ipynb](x_extract_relevance_maps_as_nifti_DELCODE.ipynb) to extract the relevance maps directly as nifti file for all participants/scans (execution time: 30 minutes with CUDA-GPU).
+- [hippocampus_volume_relevance_analysis_DELCODE.html](hippocampus_volume_relevance_analysis_DELCODE.html) for the baseline group separation analysis of hippocampus volume and the correlation analysis of hippocampus volume and relevance (see also other R/Rmd scripts).
+- [y_occlusion_analysis.ipynb](y_occlusion_analysis.ipynb) code for the occlusion sensitivity analysis (execution time: 90 minutes with CUDA-GPU).
+- [z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb](z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
 
 
 ***
