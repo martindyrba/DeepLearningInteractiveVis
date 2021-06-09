@@ -24,7 +24,7 @@ from keras.utils import to_categorical
 import multiprocessing
 import concurrent.futures # this module was introduced in Python 3.2; use the futures backport module for Python 2.7
 
-from config import debug, selected_neuron, disable_gpu_for_tensorflow, stored_models, selected_model, \
+from config import debug, selected_neuron, adaptive_relevance_scaling, disable_gpu_for_tensorflow, stored_models, selected_model, \
     background_images_path, residuals_path, covariates_excel_file, covariates_excel_sheet, \
     do_model_prefetch, linear_model_path, data_files
 
@@ -238,8 +238,10 @@ def scale_relevance_map(relevance_map, clipping_threshold):
     if debug: print("Called scale_relevance_map()")
     r_map = np.copy(relevance_map)  # leave original object unmodified.
     # perform intensity normalization
-    #scale = np.quantile(np.absolute(r_map), 0.99)
-    scale = 1/400 # multiply by 400
+    if adaptive_relevance_scaling:
+        scale = np.quantile(np.absolute(r_map), 0.9999)
+    else:
+        scale = 1/500 # multiply by 500
     if scale != 0:  # fallback if quantile returns zero: directly use abs max instead
         r_map = (r_map / scale)  # rescale range
     # corresponding to vmax in plt.imshow; vmin=-vmax used here
