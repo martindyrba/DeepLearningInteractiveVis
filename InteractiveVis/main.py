@@ -359,6 +359,23 @@ def set_transparency_callback(attr, old, new):
     v.plot_sagittal()
 
 
+# This list will save the old value of transparency_slider
+old_transparency = []
+def click_transparency_change(attr):
+    """
+        This function controls the transparency of the overlay on
+        "hide overlay" button click.
+    
+    """
+    if debug: print("Called click_transperency_change().")
+    if v.toggle_transparency.active:
+        old_transparency.clear()
+        old_transparency.append(v.transparency_slider.value)
+        v.transparency_slider.value = 1
+    else:
+        v.transparency_slider.value = old_transparency[0]
+
+
 def click_show_regions_callback(attr):
     """
     Called if the "Show region outline" button has been pressed.
@@ -489,6 +506,7 @@ v.flip_frontal_view.on_click(flip_frontal_callback)
 v.threshold_slider.on_change('value', apply_thresholds_callback)
 v.clustersize_slider.on_change('value', apply_thresholds_callback)
 v.transparency_slider.on_change('value', set_transparency_callback)
+v.toggle_transparency.on_click(click_transparency_change)
 
 v.model_select.on_change('value', select_model_callback)
 

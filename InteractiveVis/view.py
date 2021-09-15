@@ -642,7 +642,7 @@ class View:
                                 source=self.axial_data)
         self.p_sagittal.image_rgba(image="image", x="x", y="y", dw=self.sagittal_zeros.shape[1],
                                    dh=self.sagittal_zeros.shape[0], source=self.sagittal_data)
-
+        self.toggle_transparency = Toggle(label='Hide relevance overlay', button_type='default', width=200)
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
         self.region_ID = get_region_id(self.slice_slider_axial.value - 1,
@@ -692,7 +692,7 @@ class View:
                 self.subject_select, self.model_select,
                 Spacer(height=40, width=200, sizing_mode='scale_width'),
                 self.threshold_slider, self.clusthist, self.clustersize_slider, self.transparency_slider,
-                self.toggle_regions, self.region_div,
+                self.toggle_transparency, self.toggle_regions, self.region_div,
                 column(self.cluster_size_div, self.cluster_mean_div, self.cluster_peak_div)
             ),
             column(
