@@ -15,7 +15,7 @@ matlabbatch{1}.spm.util.imcalc.options.dtype = 2;
 matlabbatch{2}.spm.util.imcalc.input = {'C:\Users\DZNE\ADNI_Daten\aal\aal.nii,1'};
 matlabbatch{2}.spm.util.imcalc.output = 'aal_temporal.nii';
 matlabbatch{2}.spm.util.imcalc.outdir = {'C:\Users\DZNE\ADNI_Daten\Hippocampus_masks'};
-matlabbatch{2}.spm.util.imcalc.expression = '((i1>=37).*(i1<=42)) + (i1==41) + (i1==42) + (i1==55) +( i1==56) + ((i1>=79).*(i1<=90))';
+matlabbatch{2}.spm.util.imcalc.expression = '((i1>=37).*(i1<=42)) + (i1==55) +( i1==56) + ((i1>=79).*(i1<=90))';
 matlabbatch{2}.spm.util.imcalc.var = struct('name', {}, 'value', {});
 matlabbatch{2}.spm.util.imcalc.options.dmtx = 0;
 matlabbatch{2}.spm.util.imcalc.options.mask = 0;
