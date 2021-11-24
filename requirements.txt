@@ -1,7 +1,7 @@
 innvestigate==1.0.9
 keras==2.2.4
-tensorflow==1.15.4
-bokeh==2.2.3
+tensorflow==1.15
+bokeh<=2.2.3
 numpy==1.18.5
 openpyxl==3.0.5
 h5py==2.10.0
@@ -10,6 +10,4 @@ matplotlib==3.3.3
 nibabel==3.2.1
 scikit-learn==0.23.2
 scikit-image==0.17.2
-
 scipy~=1.6.0
-
