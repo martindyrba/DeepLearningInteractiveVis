@@ -2,8 +2,10 @@
 
 This project contains all code to learn a convolutional neural network model to detect Alzheimer's disease and visualize contributing brain regions with high relevance.
  
-Further details on the procedures including samples, image processing, neural network modeling, evaluation, and validation were published in:
+**Further details on the procedures including samples, image processing, neural network modeling, evaluation, and validation were published in:**
+
 Dyrba et al. (2021) Improving 3D convolutional neural network comprehensibility via interactive visualization of relevance maps: evaluation in Alzheimer’s disease. *Alzheimer's research & therapy* 13. DOI: [10.1186/s13195-021-00924-2](https://doi.org/10.1186/s13195-021-00924-2).
+
 
 ![Screenshot of the InteractiveVis app](InteractiveVis.png)*Screenshot of the InteractiveVis app*
 
