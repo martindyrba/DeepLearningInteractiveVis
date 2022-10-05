@@ -411,7 +411,7 @@ class View:
         """
         if debug: print("Called disable_widgets().")
 
-        self.loading_label.update(visible=True)
+        self.processing_label.update(visible=True)
         self.model_select.update(disabled=True)
         self.subject_select.update(disabled=True)
         self.slice_slider_frontal.update(disabled=True)
@@ -440,7 +440,7 @@ class View:
         self.transparency_slider.update(disabled=False)
         self.toggle_regions.update(disabled=False)
         self.flip_frontal_view.update(disabled=False)
-        self.loading_label.update(visible=False)
+        self.processing_label.update(visible=False)
 
     def make_covariates_editable(self):
         """
@@ -452,7 +452,7 @@ class View:
         self.sex_select.update(disabled=False)
         self.tiv_spinner.update(disabled=False)
         self.field_strength_select.update(disabled=False)
-        self.residualize_button.update(disabled=False)
+        self.prepare_button.update(disabled=False)
 
     def freeze_covariates(self):
         """
@@ -466,7 +466,7 @@ class View:
         self.sex_select.update(disabled=True)
         self.tiv_spinner.update(disabled=True)
         self.field_strength_select.update(disabled=True)
-        self.residualize_button.update(disabled=True)
+        self.prepare_button.update(disabled=True)
 
     def __init__(self, m):
         if debug: print("Initializing new View object...")
@@ -604,7 +604,7 @@ class View:
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_frontal)
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_axial)
 
-        self.loading_label = Label(
+        self.processing_label = Label(
             text='Processing scan...', render_mode='css',
             x=self.m.subj_bg.shape[1] // 2,
             y=self.m.subj_bg.shape[2] // 2,
@@ -614,7 +614,7 @@ class View:
             background_fill_color='black', background_fill_alpha=0.5,
             level='overlay', visible=False)
 
-        self.p_axial.add_layout(self.loading_label)
+        self.p_axial.add_layout(self.processing_label)
 
         self.render_backround()
 
@@ -681,10 +681,10 @@ class View:
         self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
-        self.residualize_button = Button(label="Start residualization and view scan", disabled=True)
+        self.prepare_button = Button(label="Start processing and evaluate scan", disabled=True)
         def dummy():
             pass
-        self.residualize_button.on_click(dummy) # TODO: remove this once on_click is working when setting callback only from the model class (bug in Bokeh 2.2.x ?)
+        self.prepare_button.on_click(dummy) # TODO: remove this once on_click is working when setting callback only from the model class (bug in Bokeh 2.2.x ?)
 
         # Initialize column layout:
         self.layout = row(
@@ -697,7 +697,7 @@ class View:
             ),
             column(
                 row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.scan_upload, css_classes=["subject_divs"]),
-                row(self.residualize_button),
+                row(self.prepare_button),
                 row(
                     column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
                     column(self.p_axial, self.slice_slider_axial, self.guide_axial),

@@ -129,8 +129,10 @@ def select_subject_worker():
     else:
         v.update_covariate_info(None, m.entered_covariates_df)
         v.make_covariates_editable()
-
-    v.p_frontal.title.text = "Scan predicted as %0.2f%% Alzheimer\'s" % m.pred
+    if m.pred is None:
+        v.p_frontal.title.text = "Scan is being evaluated..."
+    else:
+        v.p_frontal.title.text = "Scan predicted as %0.2f%% Alzheimer\'s" % m.pred
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
     v.render_backround()
@@ -414,7 +416,7 @@ def upload_scan_callback(attr, old, new):
     """
     Called if a new file has been uploaded.
     Attempts to load the file as array and enable covariate widgets for entering values
-    for residualization.
+    for processing.
     Also sets initial values for the covariates.
 
     :param attr: not used
@@ -429,41 +431,77 @@ def upload_scan_callback(attr, old, new):
     v.sex_select.update(value='N/A')
     v.tiv_spinner.update(value=1400)
     v.field_strength_select.update(value='3.0')
-
-    m.load_nifti(new, is_zipped)
+    try:
+        m.load_nifti(new, is_zipped)
+    except Exception as e:
+        v.p_frontal.title.text = str(type(e).__name__)+": "+str(e)
+        print("Exception: {}".format(type(e).__name__))
+        print("Exception message: {}".format(e))
     v.make_covariates_editable()
 
 
-def residualize_worker():
+def reset_visualization_to_empty_overlay():
     """
-    This exists just to pack all work for residualization in one callback method for bokeh's add_next_tick_callback(...)
+    Resets the visual elements to display empty overlay.
+    Currently only being used/invoked when processing own data uploaded by the user.
 
     :return: None
     """
-    print("Called residualize_worker()")
-    sex_identifier = 0.5
-    if (v.sex_select.value == "female"):
-        sex_identifier = 1.0
-    elif (v.sex_select.value == "male"):
-        sex_identifier = 0.0
+    v.processing_label.update(visible=True)
+    # temporarily show this subject with empty overlay:
+    m.reset_prepared_data(m.uploaded_bg_img)
+    m.set_subj_img(m.uploaded_residual)
+    m.set_subj_bg(m.uploaded_bg_img)
+    m.pred = None
+    v.p_frontal.title.text = "Scan is being evaluated..."
+    v.render_backround()
+    v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
+    v.update_cluster_sizes_histogram()
 
-    m.residualize(m.uploaded_bg_img, v.age_spinner.value, sex_identifier, v.tiv_spinner.value, float(v.field_strength_select.value))
-    # Add user upload to selection box:
-    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload")
+    v.update_guide_frontal()
+    v.update_guide_axial()
+    v.update_guide_sagittal()
+
+    v.plot_frontal()
+    v.plot_axial()
+    v.plot_sagittal()
+    v.update_cluster_divs()
+
+
+def prepare_data_worker():
+    """
+    This exists just to pack all heavy work for processing in one callback method for bokeh's add_next_tick_callback(...)
+
+    :return: None
+    """
+    print("Called prepare_data_worker()")
+    # prepare the data for CNN model input, which might take a while:
+    m.prepare_data(m.uploaded_bg_img)
+    # update the visualization:
     select_subject_worker()
 
 
 def enter_covariates_callback():
     """
-    Called if the 'Start residualization and view scan' button has been pressed.
-    Disables widgets, shows 'loading label' and performs residualization work.
+    Called if the 'Start processing and evaluate scan' button has been pressed for own data uploaded by the user.
+    Disables widgets, shows 'loading label' and performs processing work.
 
     :return: None
     """
     if debug: print("Called enter_covariates_callback")
     v.disable_widgets()
-
-    v.curdoc().add_next_tick_callback(residualize_worker)
+    
+    sex_identifier = 0.5
+    if (v.sex_select.value == "female"):
+        sex_identifier = 1.0
+    elif (v.sex_select.value == "male"):
+        sex_identifier = 0.0
+    m.set_covariates(v.age_spinner.value, sex_identifier, v.tiv_spinner.value, float(v.field_strength_select.value))
+    
+    # Add user upload to selection box:
+    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload")
+    reset_visualization_to_empty_overlay()
+    v.curdoc().add_next_tick_callback(prepare_data_worker) # early return, do the heavy work on next tick
 
 
 dontplot = False
@@ -510,7 +548,7 @@ v.toggle_transparency.on_click(click_transparency_change)
 
 v.model_select.on_change('value', select_model_callback)
 
-v.residualize_button.on_click(enter_covariates_callback)
+v.prepare_button.on_click(enter_covariates_callback)
 v.scan_upload.on_change("value", upload_scan_callback)
 
 # automatically close bokeh after browser window was closed

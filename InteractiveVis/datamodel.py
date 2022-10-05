@@ -64,7 +64,7 @@ print('Checking for scans not found in Excel sheet: ', sum(x < 0 for x in cov_id
 labels = pd.DataFrame({'Group': grpbin}).iloc[cov_idx, :]
 grps = pd.DataFrame({'Group': grp, 'RID': sid}).iloc[cov_idx, :]
 
-# Load residualized data from disk:
+# Load prepared data from disk:
 hf = h5py.File(residuals_path, 'r')
 hf.keys  # read keys
 model_input_images = np.array(hf.get('images'))  # note: was of data frame type before
@@ -252,14 +252,14 @@ def scale_relevance_map(relevance_map, clipping_threshold):
     return r_map
 
 
-def do_residualize(covs, lmcoeffs, data, first_slice, last_slice):
+def do_prepare(covs, lmcoeffs, data, first_slice, last_slice):
 	"""
-	Actually performs the residualization of uploaded user content.
-	Will be executed in paralell using multiprocessing to speed up calculations.
+	Actually performs the processing of uploaded user content.
+	Will be executed in parallel using multiprocessing to speed up calculations.
 	
 	:param numpy.ndarray covs: the covariates array
 	:param numpy.ndarray lmcoeffs: the coefficients of the linear models (one vector for each voxel)
-	:param numpy.ndarray data: the input image to residualize
+	:param numpy.ndarray data: the input image to prepare
 	:param int first_slice: the first slice to processing
 	:param int last_slice: the last slice to process (exclusive)
 	:return: an array containing the residuals of the selected slices
@@ -269,8 +269,8 @@ def do_residualize(covs, lmcoeffs, data, first_slice, last_slice):
 	out_size = list(data.shape)
 	out_size[2] = last_slice-first_slice
 	out = np.zeros(tuple(out_size), dtype=np.float32)
-	print(out.shape)
-	print('Processing depth slices ', str(first_slice), ' to ', str(last_slice-1), ' of ', str(data.shape[2]))
+	#print(out.shape)
+	if debug: print('Processing depth slices ', str(first_slice), ' to ', str(last_slice-1), ' of ', str(data.shape[2]))
 	for k in range(first_slice, last_slice):
 		for j in range(data.shape[1]):
 			for i in range(data.shape[0]):
@@ -322,9 +322,10 @@ class Model:
         """
         Sets the model input image and creates relevance map and prediction.
         
-        :param numpy.ndarray img: the residualized model input image
+        :param numpy.ndarray img: the prepared model input image
         :return: None
         """
+        if debug: print("Called set_subj_img().")
         self.subj_img = img
         self.subj_img = np.reshape(self.subj_img, (
             1,) + self.subj_img.shape)  # add first subj index again to mimic original array structure
@@ -344,6 +345,7 @@ class Model:
         :param numpy.ndarray bg: the background image
         :return: None
         """
+        if debug: print("Called set_subj_bg().")
         self.subj_bg = bg
 
     def load_nifti(self, base64str, is_zipped):
@@ -360,11 +362,9 @@ class Model:
             <li> 4. dimension: color channels (should be 1, because of monochrome gray scan)
         :rtype: numpy.ndarray
         """
-
         # x: sag
         # y: cor
         # z: axi
-
         x_range_from = 10
         x_range_to = 110
         y_range_from = 13
@@ -377,7 +377,7 @@ class Model:
         img_arr = np.zeros(
             (z_range_to - z_range_from, x_range_to - x_range_from, y_range_to - y_range_from, 1),
             dtype=np.float32)  # z×x×y×1; avoid 64bit types
-
+        
         base64_bytes = base64str.encode("ascii")
         raw_bytes = base64.b64decode(base64_bytes)
         if is_zipped:
@@ -388,9 +388,11 @@ class Model:
             nifti_bytes = raw_bytes
         inputstream = BytesIO(nifti_bytes)
         file_holder = nib.FileHolder(fileobj=inputstream)
-
+        
         img = nib.Nifti1Image.from_file_map({'header': file_holder, 'image': file_holder})
-        assert (img.shape == (121, 145, 121))
+        if img.shape != (121,145,121):
+            raise ValueError("Invalid image shape for uploaded image! Got: " + str(img.shape) + ", expected: (121,145,121)")
+        
         if debug:
             print("original img.shape:")
             print(img.shape)
@@ -408,31 +410,56 @@ class Model:
         return img_arr
 
 
-    def residualize(self, img_arr, age=73, sex=0.498181818, tiv=1409, field=2.859090909):
+    def reset_prepared_data(self, img_arr):
         """
-        Performs linear regression-based covariates cleaning of given scan.
-        Takes about 1 min.
+        Resets the "prepared" data (residuals) to a zero-filled array.
+        This method is only being used for visualization purpose in order to already show an empty overlay while the data is still being processed/prepared.
+        :param img_arr: numpy array to prepare
+        :return: a copy of the img_array filled with zeros
+        :rtype: numpy.ndarray
+        """
+        if debug: print('Called reset_prepared_data().')
+        res = np.zeros(img_arr.shape, img_arr.dtype)
+        self.uploaded_residual = res
+        return res
 
-        Default covariate values are average values from ADNI2 sample.
 
-        :param img_arr: numpy array to residualize
+    def set_covariates(self, age=73, sex=0.5, tiv=1400, field=2.86):
+        """
+        Sets the covariates information to be displayed in the visualization.
+        Default covariate values are average values obtained from the ADNI2 sample.
+
+        :param img_arr: numpy array to prepare
         :param int age: age of subject in years
         :param float sex: 1 = female, 0 = male
         :param float tiv: head volume in cm³ = ml
         :param field: the MRI field strength
-        :return: the residualized array
-        :rtype: numpy.ndarray
         """
-
-        # Perform regression-based covariates cleaning
-        #res = np.copy(img_arr)  # residualized image
-        
         self.entered_covariates_df = pd.DataFrame({'Age': [age], 'Sex': [sex], 'TIV': [tiv], 'FieldStrength': [field]})
         print(self.entered_covariates_df)
+
+
+    def prepare_data(self, img_arr):
+        """
+        Performs linear regression-based covariates cleaning of given scan.
+        May take about 1 min, but typically should be much faster on multi-core CPU systems.
+
+        Default covariate values are average values obtained from the ADNI2 sample.
+
+        :param img_arr: numpy array to prepare
+        :return: the prepared array
+        :rtype: numpy.ndarray
+        """
+        if debug: print('Called prepare_data().')
+        # uncomment to directly use the provided data as input:
+        # res = np.copy(img_arr)
+        # return res
+        
+        print(self.entered_covariates_df) # assume covariates were already set using set_covariates() before
         covariates = self.entered_covariates_df.to_numpy(dtype=np.float32)  # convert data frame to nparray with 32bit types
 
-        if linear_model_path is None: # shortcut to avoid residualization if no model is given
-            print("Skipping residualization, returning original data.")
+        if linear_model_path is None: # shortcut to avoid processing if no model is given
+            print("Skipping processing, returning original data.")
         else:
             if self.lmarray is None:
                 # load coefficients for linear models from hdf5
@@ -456,7 +483,7 @@ class Model:
                     self.executor = concurrent.futures.ProcessPoolExecutor(self.num_threads) # change to ThreadPoolExecutor for better debugging
                     self.step_size = np.ceil(img_arr.shape[2] / self.num_threads).astype(int)
             
-            print("Submitting n=", str(self.num_threads), " parallel workers for residualization")
+            print("Submitting n=", str(self.num_threads), " parallel workers for processing")
             futures = []
             for i in range(self.num_threads):
                 args = (covariates,
@@ -464,7 +491,7 @@ class Model:
                         img_arr,
                         i*self.step_size, 
                         min((i+1)*self.step_size,img_arr.shape[2]))
-                futures.append(self.executor.submit(do_residualize, *args))
+                futures.append(self.executor.submit(do_prepare, *args))
             concurrent.futures.wait(futures)
             if debug:
                 print(futures)
@@ -472,7 +499,7 @@ class Model:
             for f in futures:
                 results.append(f.result())
             res = np.concatenate(results, axis=2)
-            print("Residualization successful.")
+            print("processing successful.")
         
         self.uploaded_residual = res
         return res
@@ -493,7 +520,7 @@ class Model:
         self.uploaded_residual = None # stores residuals for user upload
         self.entered_covariates_df = None # DataFrame of entered covariates
         self.lmarray = None # linear model coefficients used for covariate cleaning of user upload
-        self.executor = None # multithreading executor for parallel processing (used for residualization)
+        self.executor = None # multithreading executor for parallel processing (used for processing)
         self.num_threads = multiprocessing.cpu_count()
         self.step_size = None # array index step size for multithreading
 
