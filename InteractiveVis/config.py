@@ -4,7 +4,7 @@
 import glob
 import os
 
-debug = False
+debug = True
 selected_neuron = 1  # switch to neuron 0 if required
 adaptive_relevance_scaling = False # fixed relevance score adjustment to range: abs(relevance)~=[0,1] if set to false, otherwise scale depending on min/max
 scale_factor = 2.5  # scale factor for brain views
