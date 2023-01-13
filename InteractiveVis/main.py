@@ -120,8 +120,14 @@ def select_subject_worker():
             m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
         else:
             if debug: print("Using uploaded scan.....")
-            m.set_subj_img(m.uploaded_residual)
-            m.set_subj_bg(m.uploaded_bg_img)
+            if v.error_flag:  # FIXME: figure out why setting the subject image takes so long to first uploaded evaluate scan
+                v.processing_label.update(visible=True)
+                m.set_subj_bg(m.uploaded_bg_img)
+                v.error_flag = False
+                pass
+            else:
+                m.set_subj_bg(m.uploaded_bg_img)
+                m.set_subj_img(m.uploaded_residual)
     if (v.subject_select.value != "User Upload"):
         v.update_covariate_info(index_lst[sorted_xs.index(
             v.subject_select.value)], None)  # called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]

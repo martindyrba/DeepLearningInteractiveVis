@@ -16,8 +16,8 @@ linear_model_path = 'linear_models_ADNI2.hdf5' # stored linear model coefficient
 
 # define list of available models and the model selected by default
 stored_models = sorted(
-        glob.glob(os.path.join('model_checkpoints','*model_wb_whole_ds.hdf5'))) + sorted(
-        glob.glob(os.path.join('model_checkpoints','*.best.hdf5'))) # get list of available models
+        glob.glob(os.path.join('model_checkpoints','*model_wb_whole_ds.hdf5'))) #+ sorted(
+#        glob.glob(os.path.join('model_checkpoints','*.best.hdf5'))) # get list of available models
 selected_model = os.path.join('model_checkpoints','resmodel_wb_whole_ds.hdf5') # model file name to load by default
 do_model_prefetch = True # load ALL models already at application startup --> this will take LONG and is only advised for long-running web/app servers
 flip_left_right_in_frontal_plot = False

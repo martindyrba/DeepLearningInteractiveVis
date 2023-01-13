@@ -473,6 +473,7 @@ class View:
         self.curdoc = curdoc # reference to the current Bokeh document
         self.m = m
         self.firstrun = True
+        self.error_flag = True
 
         self.subject_select = Select(title="Subjects:", value=sorted_xs[0], options=sorted_xs, width=200)
         self.model_select = Select(title="Model:", value=selected_model, options=stored_models, width=200)
