@@ -329,7 +329,6 @@ class Model:
         self.subj_img = img
         self.subj_img = np.reshape(self.subj_img, (
             1,) + self.subj_img.shape)  # add first subj index again to mimic original array structure
-
         # evaluate/predict diag for selected subject
         self.pred = (self.mymodel.predict(self.subj_img)[0, 1] * 100)  # scale probability score to percent
         # derive relevance map from CNN model

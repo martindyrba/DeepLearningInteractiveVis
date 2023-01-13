@@ -7,7 +7,7 @@ from datamodel import index_lst, sorted_xs, Model
 import view
 from bokeh.events import Tap, Pan, MouseWheel
 import numpy as np
-
+import time
 
 def click_frontal_callback(event):
     """
@@ -120,14 +120,12 @@ def select_subject_worker():
             m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
         else:
             if debug: print("Using uploaded scan.....")
-            if v.error_flag:  # FIXME: figure out why setting the subject image takes so long to first uploaded evaluate scan
-                v.processing_label.update(visible=True)
-                m.set_subj_bg(m.uploaded_bg_img)
+            if v.error_flag:
                 v.error_flag = False
                 pass
             else:
-                m.set_subj_bg(m.uploaded_bg_img)
                 m.set_subj_img(m.uploaded_residual)
+                m.set_subj_bg(m.uploaded_bg_img)
     if (v.subject_select.value != "User Upload"):
         v.update_covariate_info(index_lst[sorted_xs.index(
             v.subject_select.value)], None)  # called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
@@ -144,18 +142,18 @@ def select_subject_worker():
     v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
     v.update_cluster_sizes_histogram()
-
     v.update_guide_frontal()
     v.update_guide_axial()
     v.update_guide_sagittal()
-
     v.plot_frontal()
     v.plot_axial()
     v.plot_sagittal()
     v.update_cluster_divs()
-    v.enable_widgets()
+    if v.firstrun:
+    	v.enable_widgets()
+    else:
+    	pass
     v.curdoc().unhold()
-
 
 def select_subject_callback(attr, old, new):
     """
@@ -463,11 +461,9 @@ def reset_visualization_to_empty_overlay():
     v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
     v.update_cluster_sizes_histogram()
-
     v.update_guide_frontal()
     v.update_guide_axial()
     v.update_guide_sagittal()
-
     v.plot_frontal()
     v.plot_axial()
     v.plot_sagittal()
@@ -485,6 +481,7 @@ def prepare_data_worker():
     m.prepare_data(m.uploaded_bg_img)
     # update the visualization:
     select_subject_worker()
+    v.enable_widgets()
 
 
 def enter_covariates_callback():
@@ -542,7 +539,6 @@ v.curdoc().hold()
 select_subject_callback('', '', '')  # call once
 # v.curdoc().unhold() #Redundant, is already unhold in select_subject_worker() call.
 v.firstrun = False
-
 v.slice_slider_frontal.on_change('value', set_slice_frontal_callback)
 v.slice_slider_axial.on_change('value', set_slice_axial_callback)
 v.slice_slider_sagittal.on_change('value', set_slice_sagittal_callback)
