@@ -15,7 +15,7 @@ RUN pip install -r requirements.txt
 COPY *.hdf5 *.xlsx     /dockerDir/
 COPY aal               /dockerDir/aal/
 COPY InteractiveVis    /dockerDir/InteractiveVis/
-COPY model_checkpoints /dockerDir/model_checkpoints/
+COPY model_checkpoints/resmodel_wb_whole_ds.hdf5 /dockerDir/model_checkpoints/
 
 # metadata to describe which port the container is listening on at runtime
 EXPOSE 5006
