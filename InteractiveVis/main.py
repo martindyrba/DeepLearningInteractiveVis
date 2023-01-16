@@ -149,10 +149,8 @@ def select_subject_worker():
     v.plot_axial()
     v.plot_sagittal()
     v.update_cluster_divs()
-    if v.firstrun:
-    	v.enable_widgets()
-    else:
-    	pass
+    if (v.subject_select.value != "User Upload"):
+        v.enable_widgets()
     v.curdoc().unhold()
 
 def select_subject_callback(attr, old, new):
