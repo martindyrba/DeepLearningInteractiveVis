@@ -149,8 +149,10 @@ def select_subject_worker():
     v.plot_axial()
     v.plot_sagittal()
     v.update_cluster_divs()
-    if (v.subject_select.value != "User Upload"):
-        v.enable_widgets()
+    if v.firstrun:
+    	v.enable_widgets()
+    else:
+    	pass
     v.curdoc().unhold()
 
 def select_subject_callback(attr, old, new):
@@ -413,6 +415,11 @@ def flip_frontal_callback(attr):
     v.plot_axial()
     v.update_guide_sagittal()
 
+def reset_scan_overlay():
+        time.sleep(5)
+        v.update_scan_label(make_visible=False)
+        v.subject_select.update(options=(["User Upload"]+sorted_xs))
+        v.file_uploaded_lbl.update(visible=True)
 
 def upload_scan_callback(attr, old, new):
     """
@@ -435,6 +442,9 @@ def upload_scan_callback(attr, old, new):
     v.field_strength_select.update(value='3.0')
     try:
         m.load_nifti(new, is_zipped)
+        #Pops up "Uploading scan..." overlay
+        v.update_scan_label(make_visible=True)
+        v.curdoc().add_next_tick_callback(reset_scan_overlay)
     except Exception as e:
         v.p_frontal.title.text = str(type(e).__name__)+": "+str(e)
         print("Exception: {}".format(type(e).__name__))
@@ -450,6 +460,7 @@ def reset_visualization_to_empty_overlay():
     :return: None
     """
     v.processing_label.update(visible=True)
+    v.file_uploaded_lbl.update(visible=False)
     # temporarily show this subject with empty overlay:
     m.reset_prepared_data(m.uploaded_bg_img)
     m.set_subj_img(m.uploaded_residual)

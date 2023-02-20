@@ -3,7 +3,6 @@
   margin: 0px 5px;
 }
 
-
 .cluster_divs {
   width: 200px !important; /*force override of bokeh's default auto-sizing policy*/
   height: 2.5em !important;

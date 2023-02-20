@@ -404,6 +404,11 @@ class View:
             rg = self.sagittal_zeros
         self.sagittal_data.data.update(image=[bg, ovl, rg])
 
+    def update_scan_label(self, make_visible=False):
+    	self.scan_upload_label.update(visible=make_visible)
+    	self.render_backround()
+    	self.plot_axial()
+
     def disable_widgets(self):
         """
         Used to disable user interaction with the bokeh widgets, if the application is currently working (e.g. processing a scan).
@@ -614,7 +619,18 @@ class View:
             background_fill_color='black', background_fill_alpha=0.5,
             level='overlay', visible=False)
 
+        self.scan_upload_label = Label(
+            text='Uploading Scan...', render_mode='css',
+            x=self.m.subj_bg.shape[1] // 2,
+            y=self.m.subj_bg.shape[2] // 2,
+            text_align='center', text_color='white',
+            text_font_size='25px', text_font_style='italic',
+            border_line_color='white', border_line_alpha=1.0,
+            background_fill_color='black', background_fill_alpha=0.5,
+            level='overlay', visible=False)
+
         self.p_axial.add_layout(self.processing_label)
+        self.p_axial.add_layout(self.scan_upload_label)
 
         self.render_backround()
 
@@ -681,6 +697,31 @@ class View:
         self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
         self.p_color_bar.add_layout(self.color_bar)
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
+        self.file_uploaded_lbl= Label(
+            text='File is successfully uploaded!', render_mode='css',
+            text_align='center',
+            text_color='green',
+            text_font_size='17px',
+            background_fill_color='#CCBFB3',
+        	background_fill_alpha=0,
+            level='overlay', visible=False)
+        self.p_file_up_lbl = figure(
+        	                      background_fill_color='#CCBFB3',
+        	                      background_fill_alpha=0,
+        	                      border_fill_color='#CCBFB3',
+        	                      border_fill_alpha=0,
+                                  plot_width=300,
+                                  plot_height=20,
+                                  margin=(0,0,0,15),
+                                  title='',
+                                  toolbar_location=None,
+                                  active_drag=None, active_inspect=None, active_scroll=None, active_tap=None,
+                                  outline_line_alpha=0.0,
+                                  )
+        self.p_file_up_lbl.axis.visible = False
+        self.p_file_up_lbl.x_range.range_padding = 0
+        self.p_file_up_lbl.y_range.range_padding = 0
+        self.p_file_up_lbl.add_layout(self.file_uploaded_lbl)
         self.prepare_button = Button(label="Start processing and evaluate scan", disabled=True)
         def dummy():
             pass
@@ -696,7 +737,7 @@ class View:
                 column(self.cluster_size_div, self.cluster_mean_div, self.cluster_peak_div)
             ),
             column(
-                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.scan_upload, css_classes=["subject_divs"]),
+                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select,column(row(self.scan_upload),row(self.p_file_up_lbl)), css_classes=["subject_divs"]),
                 row(self.prepare_button),
                 row(
                     column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),

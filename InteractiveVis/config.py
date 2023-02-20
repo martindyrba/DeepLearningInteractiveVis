@@ -4,7 +4,7 @@
 import glob
 import os
 
-debug = False
+debug = True
 selected_neuron = 1  # switch to neuron 0 if required
 adaptive_relevance_scaling = False # fixed relevance score adjustment to range: abs(relevance)~=[0,1] if set to false, otherwise scale depending on min/max
 scale_factor = 2.5  # scale factor for brain views
@@ -16,10 +16,10 @@ linear_model_path = 'linear_models_ADNI2.hdf5' # stored linear model coefficient
 
 # define list of available models and the model selected by default
 stored_models = sorted(
-        glob.glob(os.path.join('model_checkpoints','*model_wb_whole_ds.hdf5'))) #+ sorted(
-#        glob.glob(os.path.join('model_checkpoints','*.best.hdf5'))) # get list of available models
+        glob.glob(os.path.join('model_checkpoints','*model_wb_whole_ds.hdf5'))) + sorted(
+        glob.glob(os.path.join('model_checkpoints','*.best.hdf5'))) # get list of available models
 selected_model = os.path.join('model_checkpoints','resmodel_wb_whole_ds.hdf5') # model file name to load by default
-do_model_prefetch = True # load ALL models already at application startup --> this will take LONG and is only advised for long-running web/app servers
+do_model_prefetch = False # load ALL models already at application startup --> this will take LONG and is only advised for long-running web/app servers
 flip_left_right_in_frontal_plot = False
 
 # define path/name to excel file and the sheet name containing covariates
