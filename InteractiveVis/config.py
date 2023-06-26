@@ -23,7 +23,7 @@ do_model_prefetch = False # load ALL models already at application startup --> t
 flip_left_right_in_frontal_plot = False
 
 # define path/name to excel file and the sheet name containing covariates
-covariates_excel_file = 'hippocampus_volume_relevance_ADNI2.xlsx'
+covariates_excel_file = 'results/hippocampus_volume_relevance_ADNI2.xlsx'
 covariates_excel_sheet = 'ADNI2_LRP_CMP'
 
 # Scan for nifti file names

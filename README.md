@@ -23,7 +23,7 @@ To run it, there are three options.
 1. **We set up a public web service to quickly try it out:** <https://explaination.net/demo>
 
 2. Alternatively, download the docker container from DockerHub: `sudo docker pull martindyrba/interactivevis`
-Then use the scripts `sudo ./run_docker_intvis.sh` and `sudo ./stop_docker_intvis.sh` to run or stop the Bokeh app. (You find both files above in this repository.)  
+Then use the scripts `sudo ./run_docker_intvis.sh` and `sudo ./stop_docker_intvis.sh` to run or stop the Bokeh app. (You find both files above in this repository.)
 After starting the docker container, the app will be available from your web browser: <http://localhost:5006/InteractiveVis>
 
 3. Download this Git repository. Install the required Python modules (see below). Then point the Anaconda prompt or terminal console to the DeepLearningInteractiveVis main directory and run the Bokeh app using:
@@ -40,10 +40,20 @@ or
 `sudo yum install scipy numpy tkinter`
 
 Also, it is recommended to first create a new Python environment (using [virtualenv/venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)) to avoid messing up your local Python modules/versions when you have other coding projects or a system shared by various users.
+```console
+conda create -n InteractiveVis python=3.7
+conda activate InteractiveVis
+```
 
 Run pip/pip3 to install the dependencies:
-`pip install -r requirements.txt`  
-Then you can start the Bokeh application as indicated above.
+```console
+pip install -r requirements.txt
+```
+
+Then you can start the Bokeh application:
+```console
+bokeh serve InteractiveVis --show
+```
 
 
 
@@ -53,7 +63,7 @@ Then you can start the Bokeh application as indicated above.
 
 ### CNN model training and performance evaluation
 
-The code for training the CNN models and evaluation is provided in this repository.  
+The code for training the CNN models and evaluation is provided in this repository.
 The order of script execution was as follows:
 
 - [1_CreateResiduals_ADNI2_StoreModels.ipynb](1_CreateResiduals_ADNI2_StoreModels.ipynb) and other scripts for the validation samples [4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb](4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb) (execution time: each 15-30 minutes).
