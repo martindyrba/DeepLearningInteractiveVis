@@ -12,7 +12,8 @@ RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # copy the content of the local src directory to the working directory
-COPY *.hdf5 *.xlsx     /dockerDir/
+COPY *.hdf5            /dockerDir/
+COPY results/*.xlsx    /dockerDir/results/
 COPY aal               /dockerDir/aal/
 COPY InteractiveVis    /dockerDir/InteractiveVis/
 COPY model_checkpoints/resmodel_wb_whole_ds.hdf5 /dockerDir/model_checkpoints/
