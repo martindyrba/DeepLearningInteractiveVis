@@ -136,7 +136,7 @@ def select_subject_worker():
     if m.pred is None:
         v.p_frontal.title.text = "Scan is being evaluated..."
     else:
-        v.p_frontal.title.text = "Scan predicted as %0.2f%% Alzheimer\'s" % m.pred
+        v.p_frontal.title.text = "Estimated likelihood of AD: %0.0f%%" % m.pred
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
     v.render_backround()
