@@ -33,19 +33,15 @@ After starting the docker container, the app will be available from your web bro
 
 ### Requirements and installation:
 
-To be able to run the interactive visualization from the Git sources, you will need Python 2 or 3 (specifically Python <3.8, in order to install tensorflow==1.15).
-Note: on some systems it is recommended to install some dependencies using the default package manager instead of pip. e.g.
-`sudo apt-get install python-numpy python-scipy python-tk`
-or
-`sudo yum install scipy numpy tkinter`
-
-Also, it is recommended to first create a new Python environment (using [virtualenv/venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)) to avoid messing up your local Python modules/versions when you have other coding projects or a system shared by various users.
+To be able to run the interactive visualization from the Git sources, you will need Python <3.8, in order to install tensorflow==1.15.
+Also, we recommend to first create a new Python environment (using [Anaconda](https://www.anaconda.com/download) or [virtualenv/venv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)) to avoid messing up your local Python modules/versions when you have other coding projects or a system shared by multiple users.
 ```console
+# for Anaconda:
 conda create -n InteractiveVis python=3.7
 conda activate InteractiveVis
 ```
 
-Run pip/pip3 to install the dependencies:
+Run pip to install the dependencies:
 ```console
 pip install -r requirements.txt
 ```
@@ -63,19 +59,19 @@ bokeh serve InteractiveVis --show
 
 ### CNN model training and performance evaluation
 
-The code for training the CNN models and evaluation is provided in this repository.
+The code for training the CNN models and evaluation is provided in this repository in the subdirectory [scripts](scripts).
 The order of script execution was as follows:
 
-- [1_CreateResiduals_ADNI2_StoreModels.ipynb](1_CreateResiduals_ADNI2_StoreModels.ipynb) and other scripts for the validation samples [4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb](4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb) (execution time: each 15-30 minutes).
-- [2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) for model training based on tenfold cross-validation to evaluate general model accuracy for the residualized data (execution time: 2-10 hrs with CUDA-GPU) and [3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb](3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb) for training the model based on the whole ADNI-GO/2 dataset.
-- [5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) and [6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb](6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
-- [7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) and [8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb](8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb) for training the models for the raw datasets (execution time: each 2-10 hrs with CUDA-GPU).
-- [9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb](9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb) and [9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
+- [1_CreateResiduals_ADNI2_StoreModels.ipynb](scripts/1_CreateResiduals_ADNI2_StoreModels.ipynb) and other scripts for the validation samples [4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb](scripts/4_CreateResiduals_DELCODE_applying_ADNI2_regr_model.ipynb) (execution time: each 15-30 minutes).
+- [2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](scripts/2_Train_3D_CNN_ADNI2_xVal_wb_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) for model training based on tenfold cross-validation to evaluate general model accuracy for the residualized data (execution time: 2-10 hrs with CUDA-GPU) and [3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb](scripts/3_Train_3D_CNN_ADNI2_whole_dataset_wb_mwp1_CAT12_MNI_shuffle.ipynb) for training the model based on the whole ADNI-GO/2 dataset.
+- [5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](scripts/5_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) and [6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb](scripts/6_Validate_3D_CNN_whole_ds_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
+- [7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb](scripts/7_Train_3D_CNN_ADNI2_xVal_wb_rawdat_mwp1_CAT12_MNI_shuffle_checkpoint.ipynb) and [8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb](scripts/8_Train_3D_CNN_ADNI2_whole_dataset_wb_rawdat_mwp1_CAT12_MNI_shuffle.ipynb) for training the models for the raw datasets (execution time: each 2-10 hrs with CUDA-GPU).
+- [9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb](scripts/9_Validate_3D_CNN_whole_ds_wb_rawdat_mwp1_CAT12_MNI_DELCODE.ipynb) and [9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb](scripts/9_Validate_3D_CNN_xVal_wb_mwp1_CAT12_MNI_DELCODE.ipynb) for the evaluation of the models using the validation data sets (execution time: each 15-30 minutes with CUDA-GPU).
 - [x_extract_hippocampus_relevance_lrpCMP_DELCODE.ipynb](x_extract_hippocampus_relevance_lrpCMP_DELCODE.ipynb) to extract the hippocampus relevance for all models (execution time: 15-30 minutes with CUDA-GPU).
-- [x_extract_relevance_maps_as_nifti_DELCODE.ipynb](x_extract_relevance_maps_as_nifti_DELCODE.ipynb) to extract the relevance maps directly as nifti file for all participants/scans (execution time: 30 minutes with CUDA-GPU).
-- [hippocampus_volume_relevance_analysis_DELCODE.html](hippocampus_volume_relevance_analysis_DELCODE.html) for the baseline group separation analysis of hippocampus volume and the correlation analysis of hippocampus volume and relevance (see also other R/Rmd scripts).
-- [y_occlusion_analysis.ipynb](y_occlusion_analysis.ipynb) code for the occlusion sensitivity analysis (execution time: 90 minutes with CUDA-GPU).
-- [z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb](z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
+- [x_extract_relevance_maps_as_nifti_DELCODE.ipynb](scripts/x_extract_relevance_maps_as_nifti_DELCODE.ipynb) to extract the relevance maps directly as nifti file for all participants/scans (execution time: 30 minutes with CUDA-GPU).
+- [hippocampus_volume_relevance_analysis_DELCODE.html](scripts/hippocampus_volume_relevance_analysis_DELCODE.html) for the baseline group separation analysis of hippocampus volume and the correlation analysis of hippocampus volume and relevance (see also other R/Rmd scripts).
+- [y_occlusion_analysis.ipynb](scripts/y_occlusion_analysis.ipynb) code for the occlusion sensitivity analysis (execution time: 90 minutes with CUDA-GPU).
+- [z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb](scripts/z_CreateResiduals_demo_dataset_applying_ADNI2_regr_model.ipynb) to create the example files being used by the InteractiveVis demo. It contains a sample of 15 people per diagnostic group, representatively selected from the ADNI-2 phase based on the criteria: amyloid status (positive for Alzheimer's dementia and amnestic mild cogntive impairment, negative for controls), MRI field strength of 3 Tesla, RID greater than 4000, and age of 65 or older. 
 
 
 ***
