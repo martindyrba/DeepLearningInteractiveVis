@@ -7,7 +7,7 @@ from bokeh.plotting import figure, curdoc
 # from bokeh.io import output_notebook, push_notebook, show #unused import
 from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
-from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner, Button
+from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner, Button, HoverTool
 import numpy as np
 # from PIL import Image
 from matplotlib import cm
@@ -473,6 +473,18 @@ class View:
         self.field_strength_select.update(disabled=True)
         self.prepare_button.update(disabled=True)
 
+    def create_tooltip(self,labels = ['x','y']):
+        hover = HoverTool(
+            tooltips=[
+                (labels[0], "$x{1.1}"),
+                (labels[1], "$y{1.1}")
+            ],
+            mode='mouse',
+            anchor='top_right',
+            renderers=[]  # Initially empty. We will append the quad renderer after it's defined.
+        )
+        return hover
+
     def __init__(self, m):
         if debug: print("Initializing new View object...")
         self.curdoc = curdoc # reference to the current Bokeh document
@@ -658,6 +670,39 @@ class View:
                                 source=self.axial_data)
         self.p_sagittal.image_rgba(image="image", x="x", y="y", dw=self.sagittal_zeros.shape[1],
                                    dh=self.sagittal_zeros.shape[0], source=self.sagittal_data)
+
+
+        #frontal hover tooltip
+        hover =self.create_tooltip(labels = ['x','z'])
+        self.p_frontal.add_tools(hover)
+        # add transparent quad to track mouse position
+        quad_renderer = self.p_frontal.quad(left=0, right=self.frontal_zeros.shape[1], bottom=0,
+                                             top=self.frontal_zeros.shape[0], alpha=0)
+        hover.renderers.append(quad_renderer)
+        # Ensure the hover tool is the active inspect tool
+        self.p_frontal.toolbar.active_inspect = [hover]
+
+        #axial hover tooltip
+        hover = self.create_tooltip(labels = ['x','y'])
+        self.p_axial.add_tools(hover)
+        #add transparent quad to track mouse position
+        quad_renderer = self.p_axial.quad(left=0, right=self.axial_zeros.shape[1], bottom=0,
+                                            top=self.axial_zeros.shape[0], alpha=0)
+        hover.renderers.append(quad_renderer)
+        # Ensure the hover tool is the active inspect tool
+        self.p_axial.toolbar.active_inspect = [hover]
+
+        #sagittal hover tooltip
+        hover =self.create_tooltip(labels = ['y','z'])
+        self.p_sagittal.add_tools(hover)
+        # add transparent quad to track mouse position
+        quad_renderer = self.p_sagittal.quad(left=0, right=self.sagittal_zeros.shape[1], bottom=0,
+                                             top=self.sagittal_zeros.shape[0], alpha=0)
+        hover.renderers.append(quad_renderer)
+        # Ensure the hover tool is the active inspect tool
+        self.p_sagittal.toolbar.active_inspect = [hover]
+
+
         self.toggle_transparency = Toggle(label='Hide relevance overlay', button_type='default', width=200)
         self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
 
