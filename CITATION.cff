@@ -1,0 +1,48 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: DeepLearningInteractiveVis
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Martin
+    family-names: Dyrba
+    email: martin.dyrba@dzne.de
+    affiliation: German Center for Neurodegenerative Diseases (DZNE)
+    orcid: 'https://orcid.org/0000-0002-3353-3167'
+identifiers:
+  - type: doi
+    value: 10.1186/s13195-021-00924-2
+    description: >-
+      journal article: Dyrba et al. (2021) Improving 3D
+      convolutional neural network comprehensibility via
+      interactive visualization of relevance maps:
+      evaluation in Alzheimer’s disease. Alzheimer's
+      Research & Therapy 13
+repository-code: 'https://github.com/martindyrba/DeepLearningInteractiveVis'
+url: 'https://explaination.net'
+repository-artifact: 'https://hub.docker.com/r/martindyrba/interactivevis'
+abstract: >-
+  This project provides a software framework and all source
+  code to learn a 3D convolutional neural network model for
+  disease detection (e.g. Alzheimer's disease) and for
+  visualization of contributing image regions with high
+  relevance.
+
+
+  Further details on the procedures including samples, image
+  processing, neural network modeling, evaluation, and
+  validation were published in:
+
+  Dyrba et al. (2021) Improving 3D convolutional neural
+  network comprehensibility via interactive visualization of
+  relevance maps: evaluation in Alzheimer’s disease.
+  Alzheimer's research & therapy 13. DOI:
+  10.1186/s13195-021-00924-2.
+license: MIT
+commit: d0e8e9815ec1e5096ff9706f9bde14634afc0ac2
+version: v1.3.3
+date-released: '2021-11-05'
