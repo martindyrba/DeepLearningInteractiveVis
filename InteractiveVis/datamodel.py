@@ -35,7 +35,7 @@ if debug:
     print(selected_model)
 
 # Import data from Excel sheet
-df = pd.read_excel(covariates_excel_file, sheet_name=covariates_excel_sheet, engine='openpyxl')
+df = pd.read_excel(covariates_excel_file, sheet_name=covariates_excel_sheet) #, engine='openpyxl'
 
 sid = df['subject_ID']
 grp = df['Group at scan date (1=CN, 2=EMCI, 3=LMCI, 4=AD, 5=SMC)']
