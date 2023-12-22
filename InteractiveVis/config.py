@@ -3,6 +3,7 @@
 
 import glob
 import os
+import json
 
 debug = True
 selected_neuron = 1  # switch to neuron 0 if required
@@ -25,6 +26,14 @@ flip_left_right_in_frontal_plot = False
 # define path/name to excel file and the sheet name containing covariates
 covariates_excel_file = 'results/hippocampus_volume_relevance_ADNI2.xlsx'
 covariates_excel_sheet = 'ADNI2_LRP_CMP'
+
+# load language files in a dictionary
+translations = {}
+lang_module = 'lang'
+for lang_file in os.listdir(lang_module):
+    language = os.path.splitext(lang_file)[0]  # Get the filename without the extension
+    with open(os.path.join(lang_module, lang_file), encoding='utf-8') as file:
+        translations[language] = json.load(file)
 
 # Scan for nifti file names
 #data_files = sorted(glob.glob('mwp1_MNI_demo/*/*.nii.gz'))

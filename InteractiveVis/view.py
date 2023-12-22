@@ -20,6 +20,9 @@ from datamodel import sorted_xs, stored_models, selected_model, get_region_name,
     sex, tiv, field
 from config import debug, flip_left_right_in_frontal_plot
 
+#get the translations data from config
+from config import translations
+
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support some palettes by default:
 overlay_colormap = cm.get_cmap('RdYlGn_r')
 color_palette = []
@@ -46,7 +49,7 @@ class View:
         self.selected_region = get_region_name(self.slice_slider_axial.value - 1,
                                                self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value - 1,
                                                self.slice_slider_frontal.value - 1)
-        self.region_div.update(text="Region: " + self.selected_region)
+        self.region_div.update(text=self.lexicon["region"] + self.selected_region)
 
     def update_cluster_divs(self):
         """
@@ -58,17 +61,17 @@ class View:
         self.cluster_index = self.clust_labelimg[self.m.subj_bg.shape[
                                                      0] - self.slice_slider_axial.value, self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value - 1, self.slice_slider_frontal.value - 1]
         if self.cluster_index == 0:
-            self.cluster_size_div.update(text="Cluster Size: " + "N/A")
-            self.cluster_mean_div.update(text="Mean Intensity: " + "N/A")
-            self.cluster_peak_div.update(text="Peak Intensity: " + "N/A")
+            self.cluster_size_div.update(text=self.lexicon["cluster_size"] + "N/A")
+            self.cluster_mean_div.update(text=self.lexicon["mean"] + "N/A")
+            self.cluster_peak_div.update(text=self.lexicon["peak"] + "N/A")
         else:
             self.cluster_size_div.update(
-                text="Cluster Size: " + str(self.clust_sizes_drawn[self.cluster_index]) + " vx = " + str(
+                text=self.lexicon["cluster_size"] + str(self.clust_sizes_drawn[self.cluster_index]) + " vx = " + str(
                     format(self.clust_sizes_drawn[self.cluster_index] * 3.375, '.0f')) + " mm³")
             self.cluster_mean_div.update(
-                text="Mean Intensity: " + str(format(self.clust_mean_intensities[self.cluster_index], '.2f')))
+                text=self.lexicon["mean"] + str(format(self.clust_mean_intensities[self.cluster_index], '.2f')))
             self.cluster_peak_div.update(
-                text="Peak Intensity: " + str(format(self.clust_peak_intensities[self.cluster_index], '.2f')))
+                text=self.lexicon["peak"] + str(format(self.clust_peak_intensities[self.cluster_index], '.2f')))
 
     def update_covariate_info(self, subj_id, entered_covariates):
         """
@@ -87,21 +90,21 @@ class View:
             self.age_spinner.update(value=age.iloc[cov_idx[subj_id]] if self.subject_select.value != "User Upload"
                                     else self.entered_covariates.get("Age"))
             if (sex.iloc[cov_idx[subj_id]] == 1):
-                self.sex_select.update(value="female")
+                self.sex_select.update(value=self.lexicon["sex_catg"][1])           # "sex_catg": ["male", "female", "N/A"]
             elif (sex.iloc[cov_idx[subj_id]] == 0):
-                self.sex_select.update(value="male")
+                self.sex_select.update(value=self.lexicon["sex_catg"][0])
             else:
-                self.sex_select.update(value="N/A")
+                self.sex_select.update(value=self.lexicon["sex-catg"][2])
             self.tiv_spinner.update(value=tiv.iloc[cov_idx[subj_id]])
             self.field_strength_select.update(value=str(field.iloc[cov_idx[subj_id]]))
         else:
             self.age_spinner.update(value=int(entered_covariates['Age'].values[0]))
             if (entered_covariates['Sex'].values[0] == 1):
-                self.sex_select.update(value="female")
+                self.sex_select.update(value=self.lexicon["sex_catg"][1])
             elif (entered_covariates['Sex'].values[0] == 0):
-                self.sex_select.update(value="male")
+                self.sex_select.update(value=self.lexicon["sex_catg"][0])
             else:
-                self.sex_select.update(value="N/A")
+                self.sex_select.update(value=self.lexicon["sex_catg"][2])
             self.tiv_spinner.update(value=float(entered_covariates['TIV'].values[0]))
             self.field_strength_select.update(value=str(entered_covariates['FieldStrength'].values[0]))
 
@@ -479,22 +482,28 @@ class View:
         self.m = m
         self.firstrun = True
         self.error_flag = True
-        self.subject_select = Select(title="Subjects:", value=sorted_xs[0], options=sorted_xs, width=200)
-        self.model_select = Select(title="Model:", value=selected_model, options=stored_models, width=200)
+        
+        # Add language selector
+        self.lang_select = Select(title='', value="DE", options=list(translations.keys()), width=65)     
+        self.lexicon = translations[self.lang_select.value]
+        self.lang_title_div = Div(text=self.lexicon["lang"], width=130)
+        
+        self.subject_select = Select(title=self.lexicon["subject"], value=sorted_xs[0], options=sorted_xs, width=200)
+        self.model_select = Select(title=self.lexicon["model"], value=selected_model, options=stored_models, width=200)
         self.slice_slider_frontal = Slider(start=1, end=m.subj_bg.shape[2], value=50, step=1,
-                                           title="Coronal slice", width=200)
+                                           title=self.lexicon["c_slice"], width=200)
         self.slice_slider_axial = Slider(start=1, end=m.subj_bg.shape[0], value=50, step=1,
-                                         title="Axial slice", width=200)
+                                         title=self.lexicon["a_slice"], width=200)
         self.slice_slider_sagittal = Slider(start=1, end=m.subj_bg.shape[1], value=50, step=1,
-                                            title="Sagittal slice", width=200)
+                                            title=self.lexicon["s_slice"], width=200)
         self.threshold_slider = Slider(start=0, end=1, value=0.4, step=0.05,
-                                       title="Relevance threshold", width=200)
+                                       title=self.lexicon["relv_th"], width=200)
         self.clustersize_slider = Slider(start=0, end=250, value=50, step=10,
-                                         title="Minimum cluster size", width=200)
-        self.transparency_slider = Slider(start=0, end=1, value=0.3, step=0.05, title="Overlay transparency", width=200)
+                                         title=self.lexicon["min_cluster"], width=200)
+        self.transparency_slider = Slider(start=0, end=1, value=0.3, step=0.05, title=self.lexicon["transparency"], width=200)
 
         # Initialize the figures:
-        self.guide_frontal = figure(plot_width=208, plot_height=70, title='Relevance>threshold per slice:',
+        self.guide_frontal = figure(plot_width=208, plot_height=70, title=self.lexicon["relv_plot_title"],
                                     toolbar_location=None,
                                     active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
         self.guide_frontal.title.text_font = 'arial'
@@ -504,7 +513,7 @@ class View:
         self.guide_frontal.x_range.range_padding = 0
         self.guide_frontal.y_range.range_padding = 0
 
-        self.guide_axial = figure(plot_width=208, plot_height=70, title='Relevance>threshold per slice:',
+        self.guide_axial = figure(plot_width=208, plot_height=70, title=self.lexicon["relv_plot_title"],
                                   toolbar_location=None,
                                   active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
         self.guide_axial.title.text_font = 'arial'
@@ -514,7 +523,7 @@ class View:
         self.guide_axial.x_range.range_padding = 0
         self.guide_axial.y_range.range_padding = 0
 
-        self.guide_sagittal = figure(plot_width=208, plot_height=70, title='Relevance>threshold per slice:',
+        self.guide_sagittal = figure(plot_width=208, plot_height=70, title=self.lexicon["relv_plot_title"],
                                      toolbar_location=None,
                                      active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
         self.guide_sagittal.title.text_font = 'arial'
@@ -524,7 +533,7 @@ class View:
         self.guide_sagittal.x_range.range_padding = 0
         self.guide_sagittal.y_range.range_padding = 0
 
-        self.clusthist = figure(plot_width=208, plot_height=70, title='Distribution of cluster sizes:',
+        self.clusthist = figure(plot_width=208, plot_height=70, title=self.lexicon["clusthist_title"],
                                 toolbar_location=None,
                                 active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
         self.clusthist.title.text_font = 'arial'
@@ -541,7 +550,7 @@ class View:
         self.p_frontal.x_range.range_padding = 0
         self.p_frontal.y_range.range_padding = 0
 
-        self.flip_frontal_view = Toggle(label='Flip L/R orientation', button_type='default', width=200,
+        self.flip_frontal_view = Toggle(label=self.lexicon["t_frontal_view"], button_type='default', width=200,
                                         active=flip_left_right_in_frontal_plot)
 
         self.orientation_label_shown_left = Label(
@@ -575,12 +584,12 @@ class View:
         self.frontal_crosshair_from_axial = Span(location=self.slice_slider_axial.value - 1, dimension='width',
                                                  line_color='green', line_width=1, render_mode="css")
         self.p_frontal.add_layout(self.frontal_crosshair_from_sagittal)
-        self.p_frontal.add_layout(self.frontal_crosshair_from_axial)
+        self.p_frontal.add_layout(self.frontal_crosshair_from_axial)   
 
         self.p_axial = figure(plot_width=int(np.floor(m.subj_bg.shape[1] * scale_factor)),
                               plot_height=int(np.floor(m.subj_bg.shape[2] * scale_factor)), title='',
                               toolbar_location=None,
-                              active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)
+                              active_drag=None, active_inspect=None, active_scroll=None, active_tap=None)                
         self.p_axial.axis.visible = False
         self.p_axial.x_range.range_padding = 0
         self.p_axial.y_range.range_padding = 0
@@ -610,7 +619,7 @@ class View:
         self.p_sagittal.add_layout(self.sagittal_crosshair_from_axial)
 
         self.processing_label = Label(
-            text='Processing scan...', render_mode='css',
+            text=self.lexicon["processing_label"], render_mode='css',
             x=self.m.subj_bg.shape[1] // 2,
             y=self.m.subj_bg.shape[2] // 2,
             text_align='center', text_color='white',
@@ -620,7 +629,7 @@ class View:
             level='overlay', visible=False)
 
         self.scan_upload_label = Label(
-            text='Uploading Scan...', render_mode='css',
+            text=self.lexicon["upload_label"], render_mode='css',
             x=self.m.subj_bg.shape[1] // 2,
             y=self.m.subj_bg.shape[2] // 2,
             text_align='center', text_color='white',
@@ -658,8 +667,8 @@ class View:
                                 source=self.axial_data)
         self.p_sagittal.image_rgba(image="image", x="x", y="y", dw=self.sagittal_zeros.shape[1],
                                    dh=self.sagittal_zeros.shape[0], source=self.sagittal_data)
-        self.toggle_transparency = Toggle(label='Hide relevance overlay', button_type='default', width=200)
-        self.toggle_regions = Toggle(label='Show outline of atlas region', button_type='default', width=200)
+        self.toggle_transparency = Toggle(label=self.lexicon["t_transparency"], button_type='default', width=200)
+        self.toggle_regions = Toggle(label=self.lexicon["t_regions"], button_type='default', width=200)
 
         self.region_ID = get_region_id(self.slice_slider_axial.value - 1,
                                        self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value - 1,
@@ -667,23 +676,23 @@ class View:
         self.selected_region = get_region_name(self.slice_slider_axial.value - 1,
                                                self.slice_slider_sagittal.end - self.slice_slider_sagittal.value if self.flip_frontal_view.active else self.slice_slider_sagittal.value - 1,
                                                self.slice_slider_frontal.value - 1)
-        self.region_div = Div(text="Region: " + self.selected_region, sizing_mode="stretch_both",
+        self.region_div = Div(text=self.lexicon["region"] + self.selected_region, sizing_mode="stretch_both",
                               css_classes=["region_divs"])
 
-        self.cluster_size_div = Div(text="Cluster Size: " + "0", css_classes=[
+        self.cluster_size_div = Div(text=self.lexicon["cluster_size"] + "0", css_classes=[
             "cluster_divs"])  # initialize with 0 because clust_labelimg does not exist yet
-        self.cluster_mean_div = Div(text="Mean Intensity: " + "0", css_classes=["cluster_divs"])
-        self.cluster_peak_div = Div(text="Peak Intensity: " + "0", css_classes=["cluster_divs"])
+        self.cluster_mean_div = Div(text=self.lexicon["mean"] + "0", css_classes=["cluster_divs"])
+        self.cluster_peak_div = Div(text=self.lexicon["peak"] + "0", css_classes=["cluster_divs"])
 
         # see InteractiveVis/static/ for default formatting/style definitions
-        self.age_spinner = Spinner(title="Age:", placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
-        self.sex_select = Select(title="Sex:", value="N/A", options=["male", "female", "N/A"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.tiv_spinner = Spinner(title="TIV:", placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.field_strength_select = Select(title="Field Strength [T]:", value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-
+        self.age_spinner = Spinner(title=self.lexicon["age"], placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
+        self.sex_select = Select(title=self.lexicon["sex"], value="N/A", options=self.lexicon["sex_catg"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.tiv_spinner = Spinner(title=self.lexicon["tiv"], placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        self.field_strength_select = Select(title=self.lexicon["field_strength"], value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
+        
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
         # parent figure in Bokeh:
-        self.p_color_bar = figure(plot_width=100,
+        self.p_color_bar = figure(plot_width=125,
                                   plot_height=int(np.floor(m.subj_bg.shape[0] * scale_factor)),
                                   title='',
                                   toolbar_location=None,
@@ -694,11 +703,11 @@ class View:
         self.p_color_bar.y_range.range_padding = 0
 
         self.color_mapper = LinearColorMapper(palette=color_palette, low=-1, high=1)
-        self.color_bar = ColorBar(color_mapper=self.color_mapper, title="Relevance")
+        self.color_bar = ColorBar(color_mapper=self.color_mapper, title=self.lexicon["relv_scale_title"])
         self.p_color_bar.add_layout(self.color_bar)
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
         self.file_uploaded_lbl= Label(
-            text='File is successfully uploaded!', render_mode='css',
+            text=self.lexicon["upload_status1"], render_mode='css',
             text_align='center',
             text_color='green',
             text_font_size='17px',
@@ -722,10 +731,35 @@ class View:
         self.p_file_up_lbl.x_range.range_padding = 0
         self.p_file_up_lbl.y_range.range_padding = 0
         self.p_file_up_lbl.add_layout(self.file_uploaded_lbl)
-        self.prepare_button = Button(label="Start processing and evaluate scan", disabled=True)
+        self.prepare_button = Button(label=self.lexicon["prepare_label"], disabled=True)
         def dummy():
             pass
         self.prepare_button.on_click(dummy) # TODO: remove this once on_click is working when setting callback only from the model class (bug in Bokeh 2.2.x ?)
+
+        self.prediction_label = Label(
+            text=self.lexicon["likelihood"], render_mode='css',
+            text_align='center',
+            text_font_size='17px',
+            text_font_style='bold',
+        	background_fill_alpha=0,
+            level='overlay', 
+            visible=True
+        )
+        self.pred_status_lbl = figure(
+        	                      background_fill_alpha=0,
+        	                      border_fill_alpha=0,
+                                  plot_width=400,
+                                  plot_height=20,
+                                  margin=(5,0,0,5),
+                                  title='',
+                                  toolbar_location=None,
+                                  active_drag=None, active_inspect=None, active_scroll=None, active_tap=None,
+                                  outline_line_alpha=0.0,
+                                  )
+        self.pred_status_lbl.axis.visible = False
+        self.pred_status_lbl.x_range.range_padding = 0
+        self.pred_status_lbl.y_range.range_padding = 0
+        self.pred_status_lbl.add_layout(self.prediction_label)
 
         # Initialize column layout:
         self.layout = row(
@@ -738,7 +772,11 @@ class View:
             ),
             column(
                 row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select,column(row(self.scan_upload),row(self.p_file_up_lbl)), css_classes=["subject_divs"]),
-                row(self.prepare_button),
+                row(column(self.prepare_button),
+                    column(Spacer(height=40, width=295, sizing_mode='scale_width')),
+                    column(self.lang_title_div),
+                    column(self.lang_select)),
+                row(self.pred_status_lbl),
                 row(
                     column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
                     column(self.p_axial, self.slice_slider_axial, self.guide_axial),
