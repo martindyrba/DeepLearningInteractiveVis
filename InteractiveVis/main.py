@@ -3,11 +3,59 @@
 # controller module
 
 from config import debug
+from config import translations
 from datamodel import index_lst, sorted_xs, Model
 import view
 from bokeh.events import Tap, Pan, MouseWheel
 import numpy as np
 import time
+
+def select_language_callback(attr, old_value, new_value):
+    """
+    Called if user has selected a new language.
+    """
+    v.lexicon = translations[new_value]
+    v.curdoc().hold()
+    
+    v.lang_title_div.update(text=v.lexicon["lang"])
+    v.subject_select.update(title=v.lexicon["subject"])
+    v.model_select.update(title=v.lexicon["model"])
+    v.threshold_slider.update(title=v.lexicon["relv_th"])
+    v.clusthist.title.text=v.lexicon["clusthist_title"]
+    v.clustersize_slider.update(title=v.lexicon["min_cluster"])
+    v.transparency_slider.update(title=v.lexicon["transparency"])
+    v.toggle_transparency.update(label=v.lexicon["t_transparency"])
+    v.toggle_regions.update(label=v.lexicon["t_regions"])
+    v.region_div.update(text=v.lexicon["region"])
+    v.cluster_size_div.update(text=v.lexicon["cluster_size"])
+    v.cluster_mean_div.update(text=v.lexicon["mean"])
+    v.cluster_peak_div.update(text=v.lexicon["peak"])
+    v.age_spinner.update(title=v.lexicon["age"])
+    v.sex_select.update(title=v.lexicon["sex"])
+    v.sex_select.update(options=v.lexicon["sex_catg"])
+    v.tiv_spinner.update(title=v.lexicon["tiv"])
+    v.field_strength_select.update(title=v.lexicon["field_strength"])
+    v.file_uploaded_lbl.update(text=v.lexicon["upload_status1"])
+    v.prepare_button.update(label=v.lexicon["prepare_label"])
+    v.slice_slider_frontal.update(title=v.lexicon["c_slice"])
+    v.guide_frontal.title.text=v.lexicon["relv_plot_title"]
+    v.flip_frontal_view.update(label=v.lexicon["t_frontal_view"])
+    v.processing_label.update(text=v.lexicon["processing_label"])
+    v.scan_upload_label.update(text=v.lexicon["upload_label"])
+    v.slice_slider_axial.update(title=v.lexicon["a_slice"])
+    v.guide_axial.title.text=v.lexicon["relv_plot_title"]
+    v.slice_slider_sagittal.update(title=v.lexicon["s_slice"])
+    v.guide_sagittal.title.text=v.lexicon["relv_plot_title"]
+    v.color_bar.update(title=v.lexicon["relv_scale_title"])
+    v.p_color_bar.add_layout(v.color_bar)
+    if m.pred is None:
+        v.prediction_label.update(text = v.lexicon["scan_evaluate"])
+    else:
+        v.prediction_label.update(text = v.lexicon["likelihood"] % m.pred)
+
+    v.curdoc().add_root(v.layout)
+    v.curdoc().unhold()
+    
 
 def click_frontal_callback(event):
     """
@@ -134,9 +182,10 @@ def select_subject_worker():
         v.update_covariate_info(None, m.entered_covariates_df)
         v.make_covariates_editable()
     if m.pred is None:
-        v.p_frontal.title.text = "Scan is being evaluated..."
+        v.prediction_label.text = v.lexicon["scan_evaluate"]
     else:
-        v.p_frontal.title.text = "Estimated likelihood of Alzheimer's: %0.0f%%" % m.pred
+        v.prediction_label.text = v.lexicon["likelihood"] % m.pred
+    v.p_frontal.title.text=" "
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
     v.render_backround()
@@ -466,7 +515,7 @@ def reset_visualization_to_empty_overlay():
     m.set_subj_img(m.uploaded_residual)
     m.set_subj_bg(m.uploaded_bg_img)
     m.pred = None
-    v.p_frontal.title.text = "Scan is being evaluated..."
+    v.p_frontal.title.text = v.lexicon["scan_evaluate"]
     v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
     v.update_cluster_sizes_histogram()
@@ -504,9 +553,9 @@ def enter_covariates_callback():
     v.disable_widgets()
     
     sex_identifier = 0.5
-    if (v.sex_select.value == "female"):
+    if (v.sex_select.value == v.lexicon["sex_catg"][1]):
         sex_identifier = 1.0
-    elif (v.sex_select.value == "male"):
+    elif (v.sex_select.value == v.lexicon["sex_catg"][0]):
         sex_identifier = 0.0
     m.set_covariates(v.age_spinner.value, sex_identifier, v.tiv_spinner.value, float(v.field_strength_select.value))
     
@@ -543,6 +592,8 @@ v.curdoc().title = 'Online AD brain viewer'
 # Set callbacks for events:
 v.toggle_regions.on_click(click_show_regions_callback)
 v.subject_select.on_change('value', select_subject_callback)
+#callback for language
+v.lang_select.on_change("value", select_language_callback)
 
 v.curdoc().hold()
 select_subject_callback('', '', '')  # call once
