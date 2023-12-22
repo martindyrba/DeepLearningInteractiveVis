@@ -484,7 +484,7 @@ class View:
         self.error_flag = True
         
         # Add language selector
-        self.lang_select = Select(title='', value="DE", options=list(translations.keys()), width=65)     
+        self.lang_select = Select(title='', value="EN", options=list(translations.keys()), width=65)     
         self.lexicon = translations[self.lang_select.value]
         self.lang_title_div = Div(text=self.lexicon["lang"], width=130)
         
