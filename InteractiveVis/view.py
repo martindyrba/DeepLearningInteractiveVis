@@ -748,7 +748,7 @@ class View:
         self.pred_status_lbl = figure(
         	                      background_fill_alpha=0,
         	                      border_fill_alpha=0,
-                                  plot_width=400,
+                                  plot_width=450,
                                   plot_height=20,
                                   margin=(5,0,0,5),
                                   title='',
