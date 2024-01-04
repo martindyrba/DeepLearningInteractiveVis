@@ -495,7 +495,7 @@ def upload_scan_callback(attr, old, new):
         v.update_scan_label(make_visible=True)
         v.curdoc().add_next_tick_callback(reset_scan_overlay)
     except Exception as e:
-        v.p_frontal.title.text = str(type(e).__name__)+": "+str(e)
+        v.prediction_label.text = str(type(e).__name__)+": "+str(e)
         print("Exception: {}".format(type(e).__name__))
         print("Exception message: {}".format(e))
     v.make_covariates_editable()
@@ -515,7 +515,7 @@ def reset_visualization_to_empty_overlay():
     m.set_subj_img(m.uploaded_residual)
     m.set_subj_bg(m.uploaded_bg_img)
     m.pred = None
-    v.p_frontal.title.text = v.lexicon["scan_evaluate"]
+    v.prediction_label.text = v.lexicon["scan_evaluate"]
     v.render_backround()
     v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
     v.update_cluster_sizes_histogram()
