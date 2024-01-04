@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -5,7 +6,7 @@ import glob
 import os
 import json
 
-debug = True
+debug = False
 selected_neuron = 1  # switch to neuron 0 if required
 adaptive_relevance_scaling = False # fixed relevance score adjustment to range: abs(relevance)~=[0,1] if set to false, otherwise scale depending on min/max
 scale_factor = 2.5  # scale factor for brain views
@@ -29,7 +30,7 @@ covariates_excel_sheet = 'ADNI2_LRP_CMP'
 
 # load language files in a dictionary
 translations = {}
-lang_module = 'lang'
+lang_module = 'InteractiveVis/lang'
 for lang_file in os.listdir(lang_module):
     language = os.path.splitext(lang_file)[0]  # Get the filename without the extension
     with open(os.path.join(lang_module, lang_file), encoding='utf-8') as file:

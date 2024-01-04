@@ -1,5 +1,5 @@
 {
-	"lang": "Sparache auswählen:",
+	"lang": "Sprache auswählen:",
     "subject": "Person: ",
     "model": "KI-Modell: ",
     "relv_th": "Min. Relevanz",
@@ -7,7 +7,7 @@
     "min_cluster": "Min. Cluster-Größe",
     "transparency": "Relevanzkarte Transparenz",
     "t_transparency": "Relevanzkarte verbergen",
-    "t_regions": "Zeige Umriss der Hirnregionen",
+    "t_regions": "Zeige Umriss der Hirnregion",
     "region": "Region: ",
     "cluster_size": "Cluster-Größe: ",
     "mean": "Mittlere Relevanz: ",
