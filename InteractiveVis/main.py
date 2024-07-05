@@ -7,6 +7,7 @@ from config import translations
 from datamodel import index_lst, sorted_xs, Model
 import view
 from bokeh.events import Tap, Pan, MouseWheel
+from bokeh.models.callbacks import CustomJS
 import numpy as np
 import time
 
@@ -571,6 +572,40 @@ m = Model()  # construct new datamodel object for storing selected subject/cnn m
 # cannot be shared across client sessions:
 v = view.View(m)
 
+# JavaScript callback for switching theme based on 'data' value of current_theme data element
+switch_theme_callback = CustomJS(args=dict(source=v.current_theme), code="""
+    var data = source.data;
+    var currentTheme = data['theme'][0];
+    var newTheme;
+
+    // Toggle theme
+    if (currentTheme === 'light') {
+        newTheme = 'dark';
+    } else {
+        newTheme = 'light';
+    }
+
+    // Update the theme
+    data['theme'][0] = newTheme;
+    source.change.emit(); // Emit change to notify Bokeh
+    var sliderActiveRanges = document.querySelectorAll('.noUi-connect');
+    
+    // Apply theme to the body
+    if (newTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        console.log("Adding dark mode: true");
+        sliderActiveRanges.forEach(function(range) {
+                range.style.backgroundColor =  "#333333"; // Dark gray for active area
+            });
+    } else {
+        document.body.classList.remove('dark-mode');
+        console.log("Adding dark mode: false");
+        sliderActiveRanges.forEach(function(range) {
+                range.style.backgroundColor =  "#E6E6E6"; // Light gray for active area
+            });
+    }
+""")
+
 # handle clicking events
 v.p_frontal.on_event(Tap, click_frontal_callback)
 v.p_frontal.on_event(Pan, click_frontal_callback)
@@ -592,8 +627,10 @@ v.curdoc().title = 'Online AD brain viewer'
 # Set callbacks for events:
 v.toggle_regions.on_click(click_show_regions_callback)
 v.subject_select.on_change('value', select_subject_callback)
-#callback for language
+# callback for language
 v.lang_select.on_change("value", select_language_callback)
+# callback for background
+v.color_mode.js_on_click(switch_theme_callback)
 
 v.curdoc().hold()
 select_subject_callback('', '', '')  # call once

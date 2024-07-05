@@ -8,6 +8,7 @@ from bokeh.plotting import figure, curdoc
 from bokeh.models.annotations import Span, ColorBar
 from bokeh.models.widgets import Slider
 from bokeh.models import Div, Toggle, Label, LinearColorMapper, ColumnDataSource, FileInput, Spinner, Button
+from bokeh.themes import Theme
 import numpy as np
 # from PIL import Image
 from matplotlib import cm
@@ -479,10 +480,17 @@ class View:
     def __init__(self, m):
         if debug: print("Initializing new View object...")
         self.curdoc = curdoc # reference to the current Bokeh document
+        self.curdoc().theme = Theme(json=
+            {'attrs' : {'Plot': {'background_fill_color': None, 'border_fill_color': None, 'outline_line_color': None},
+                        'Title': {'text_color': 'lightslategrey'}}})
         self.m = m
         self.firstrun = True
         self.error_flag = True
         
+        # Add Light/Dark theme switch
+        self.current_theme = ColumnDataSource(data=dict(theme=['light']))  # data element to store current theme state 
+        self.color_mode = Button(label="Switch to Dark/Light Mode", width=150)
+
         # Add language selector
         self.lang_select = Select(title='', value="EN", options=list(translations.keys()), width=65)     
         self.lexicon = translations[self.lang_select.value]
@@ -703,7 +711,10 @@ class View:
         self.p_color_bar.y_range.range_padding = 0
 
         self.color_mapper = LinearColorMapper(palette=color_palette, low=-1, high=1)
-        self.color_bar = ColorBar(color_mapper=self.color_mapper, title=self.lexicon["relv_scale_title"])
+        self.color_bar = ColorBar(color_mapper=self.color_mapper, title=self.lexicon["relv_scale_title"], background_fill_color='#CCBFB3', background_fill_alpha=0)
+        self.color_bar.title_text_color="#888888"
+        self.color_bar.major_tick_line_color="#888888"
+        self.color_bar.major_label_text_color="#888888"
         self.p_color_bar.add_layout(self.color_bar)
         self.scan_upload = FileInput(accept='.nii.gz, .nii')
         self.file_uploaded_lbl= Label(
@@ -741,6 +752,7 @@ class View:
             text_align='center',
             text_font_size='17px',
             text_font_style='bold',
+            text_color='#888888',
         	background_fill_alpha=0,
             level='overlay', 
             visible=True
@@ -773,9 +785,10 @@ class View:
             column(
                 row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select,column(row(self.scan_upload),row(self.p_file_up_lbl)), css_classes=["subject_divs"]),
                 row(column(self.prepare_button),
-                    column(Spacer(height=40, width=295, sizing_mode='scale_width')),
+                    column(Spacer(height=40, width=135, sizing_mode='scale_width')),
                     column(self.lang_title_div),
-                    column(self.lang_select)),
+                    column(self.lang_select),
+                    column(self.color_mode)),
                 row(self.pred_status_lbl),
                 row(
                     column(self.p_frontal, self.slice_slider_frontal, self.guide_frontal, self.flip_frontal_view),
