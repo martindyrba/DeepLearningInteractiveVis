@@ -1,17 +1,74 @@
+:root {
+  --light-background: #ffffff;
+  --light-text: #000000;
+  --light-subject-divs: #CCBFB3;
+  --light-cluster-divs: #429e5a;
+  --light-region-divs: #c6e2f2;
+  --dark-background: #222222;
+  --dark-text: #fffff0;
+  --dark-subject-divs: #696969;
+  --dark-cluster-divs: #003747;
+  --dark-region-divs: #008080;
+}
+
+body {
+  background-color: var(--light-background);
+  color: var(--light-text);
+}
+
 .subject_divs {
-  background-color:#CCBFB3;
+  background-color: var(--light-subject-divs);
   margin: 0px 5px;
 }
 
 .cluster_divs {
   width: 200px !important; /*force override of bokeh's default auto-sizing policy*/
   height: 2.5em !important;
-  background-color:#429e5a;
+  background-color: var(--light-cluster-divs);
   margin: 0px 5px;
 }
 
 .region_divs {
   width: 200px !important;
   height: 2.5em !important;
-  background-color:#c6e2f2;
+  background-color: var(--light-region-divs);
+}
+
+body.dark-mode {
+  background-color: var(--dark-background);
+  color: var(--dark-text);
+}
+
+.dark-mode .subject_divs {
+  background-color: var(--dark-subject-divs);
+}
+
+.dark-mode .cluster_divs {
+  background-color: var(--dark-cluster-divs);
+}
+
+.dark-mode .region_divs {
+  background-color: var(--dark-region-divs);
+}
+
+.dark-mode .bk-input, 
+.dark-mode .bk-btn {
+  background-color: #3a3a3a;
+  color: #fffff0;
+}
+
+.dark-mode .bk-btn:hover {
+  background-color: #323232;
+}
+
+.dark-mode .bk-btn.bk-active {
+  background-color: #2a2a2a;
+}
+
+.dark-mode .noUi-touch-area {
+  background-color: #222222;
+}
+
+.dark-mode .noUi-connects {
+  background-color: #808080;
 }
