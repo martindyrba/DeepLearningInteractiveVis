@@ -720,7 +720,7 @@ class View:
         self.file_uploaded_lbl= Label(
             text=self.lexicon["upload_status1"], render_mode='css',
             text_align='center',
-            text_color='green',
+            text_color='#00C260',
             text_font_size='17px',
             background_fill_color='#CCBFB3',
         	background_fill_alpha=0,

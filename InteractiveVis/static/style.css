@@ -6,7 +6,7 @@
   --light-region-divs: #c6e2f2;
   --dark-background: #222222;
   --dark-text: #fffff0;
-  --dark-subject-divs: #696969;
+  --dark-subject-divs: #646464;
   --dark-cluster-divs: #003747;
   --dark-region-divs: #008080;
 }
@@ -51,12 +51,16 @@ body.dark-mode {
   background-color: var(--dark-region-divs);
 }
 
-.dark-mode .bk-input, 
+.dark-mode .bk-input,
 .dark-mode .bk-btn {
   background-color: #3a3a3a;
   color: #fffff0;
 }
 
+.dark-mode .bk-input[disabled] {
+  background-color: #7f7f7f;
+  color: #fffff0;
+}
 .dark-mode .bk-btn:hover {
   background-color: #323232;
 }
