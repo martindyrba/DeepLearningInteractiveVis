@@ -53,6 +53,7 @@ def select_language_callback(attr, old_value, new_value):
         v.prediction_label.update(text = v.lexicon["scan_evaluate"])
     else:
         v.prediction_label.update(text = v.lexicon["likelihood"] % m.pred)
+    v.color_mode.update(label=v.lexicon["theme_label"])
 
     v.curdoc().add_root(v.layout)
     v.curdoc().unhold()
@@ -593,13 +594,13 @@ switch_theme_callback = CustomJS(args=dict(source=v.current_theme), code="""
     // Apply theme to the body
     if (newTheme === 'dark') {
         document.body.classList.add('dark-mode');
-        console.log("Adding dark mode: true");
+        // console.log("Adding dark mode: true");
         sliderActiveRanges.forEach(function(range) {
                 range.style.backgroundColor =  "#333333"; // Dark gray for active area
             });
     } else {
         document.body.classList.remove('dark-mode');
-        console.log("Adding dark mode: false");
+        // console.log("Adding dark mode: false");
         sliderActiveRanges.forEach(function(range) {
                 range.style.backgroundColor =  "#E6E6E6"; // Light gray for active area
             });

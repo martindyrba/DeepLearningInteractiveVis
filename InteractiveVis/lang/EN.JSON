@@ -30,5 +30,6 @@
     "s_slice": "Sagittal slice",
     "relv_plot_title": "Relevance>threshold per slice: ",
     "relv_scale_title": "Relevance",
-    "t_frontal_view": "Flip L/R orientation"
+    "t_frontal_view": "Flip L/R orientation",
+    "theme_label": "Switch to Dark/Light Mode"
 }
