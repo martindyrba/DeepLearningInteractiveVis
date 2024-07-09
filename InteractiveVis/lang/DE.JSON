@@ -30,5 +30,6 @@
     "s_slice": "Sagittale Schicht",
     "relv_plot_title": "Aggregierte Relevanz pro Schicht: ",
     "relv_scale_title": "Relevanz",
-    "t_frontal_view": "Tausche Links/Rechts in d. Darstellung"
+    "t_frontal_view": "Tausche Links/Rechts in d. Darstellung",
+    "theme_label": "Wechsle zu hellem/dunklem Modus"
 }

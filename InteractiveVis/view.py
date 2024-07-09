@@ -486,16 +486,16 @@ class View:
         self.m = m
         self.firstrun = True
         self.error_flag = True
+
+        # Add language selector
+        self.lang_select = Select(title='', value="EN", options=list(translations.keys()), width=62)     
+        self.lexicon = translations[self.lang_select.value]
+        self.lang_title_div = Div(text=self.lexicon["lang"], width=118)
         
         # Add Light/Dark theme switch
         self.current_theme = ColumnDataSource(data=dict(theme=['light']))  # data element to store current theme state 
-        self.color_mode = Button(label="Switch to Dark/Light Mode", width=150)
+        self.color_mode = Button(label=self.lexicon["theme_label"], width=140)
 
-        # Add language selector
-        self.lang_select = Select(title='', value="EN", options=list(translations.keys()), width=65)     
-        self.lexicon = translations[self.lang_select.value]
-        self.lang_title_div = Div(text=self.lexicon["lang"], width=130)
-        
         self.subject_select = Select(title=self.lexicon["subject"], value=sorted_xs[0], options=sorted_xs, width=200)
         self.model_select = Select(title=self.lexicon["model"], value=selected_model, options=stored_models, width=200)
         self.slice_slider_frontal = Slider(start=1, end=m.subj_bg.shape[2], value=50, step=1,
@@ -785,7 +785,7 @@ class View:
             column(
                 row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select,column(row(self.scan_upload),row(self.p_file_up_lbl)), css_classes=["subject_divs"]),
                 row(column(self.prepare_button),
-                    column(Spacer(height=40, width=135, sizing_mode='scale_width')),
+                    column(Spacer(height=40, width=125, sizing_mode='scale_width')),
                     column(self.lang_title_div),
                     column(self.lang_select),
                     column(self.color_mode)),
