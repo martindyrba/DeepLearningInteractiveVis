@@ -409,9 +409,27 @@ class View:
         self.sagittal_data.data.update(image=[bg, ovl, rg])
 
     def update_scan_label(self, make_visible=False):
-    	self.scan_upload_label.update(visible=make_visible)
-    	self.render_backround()
-    	self.plot_axial()
+        """
+        Updates the visibility of the uploading scan label.
+
+        :param bool make_visible: Flag to determine the visibility of the uploading scan label. Default is False for hidden.
+        :return: None
+        """
+        if debug: 
+            print(f"Scan label updated (visible: {make_visible})")
+        self.scan_upload_label.update(visible=make_visible)
+        # self.render_backround()
+    	# self.plot_axial()
+    
+    def update_processing_label(self, make_visible=False):
+        """
+        Updates the visibility of the processing label.
+
+        :param bool make_visible: Flag to determine the visibility of the processing label. Default is False for hidden.
+        :return: None
+        """
+        if debug: print(f"Processing label updated (visible: {make_visible})")
+        self.processing_label.update(visible=make_visible)
 
     def disable_widgets(self):
         """
@@ -420,7 +438,6 @@ class View:
         """
         if debug: print("Called disable_widgets().")
 
-        self.processing_label.update(visible=True)
         self.model_select.update(disabled=True)
         self.subject_select.update(disabled=True)
         self.slice_slider_frontal.update(disabled=True)
@@ -431,7 +448,8 @@ class View:
         self.transparency_slider.update(disabled=True)
         self.toggle_regions.update(disabled=True)
         self.flip_frontal_view.update(disabled=True)
-
+        self.lang_select.update(disabled=True)
+        self.color_mode.update(disabled=True)
     def enable_widgets(self):
         """
         Enable user interaction with the widgets again.
@@ -449,7 +467,8 @@ class View:
         self.transparency_slider.update(disabled=False)
         self.toggle_regions.update(disabled=False)
         self.flip_frontal_view.update(disabled=False)
-        self.processing_label.update(visible=False)
+        self.lang_select.update(disabled=False)
+        self.color_mode.update(disabled=False)
 
     def make_covariates_editable(self):
         """
@@ -484,8 +503,8 @@ class View:
             {'attrs' : {'Plot': {'background_fill_color': None, 'border_fill_color': None, 'outline_line_color': None},
                         'Title': {'text_color': 'lightslategrey'}}})
         self.m = m
-        self.firstrun = True
-        self.error_flag = True
+        self.firstrun = True # this flag triggers necessary callbacks at the application start
+        self.processing_done = False # this flag tracks user-upload data for plotting
 
         # Add language selector
         self.lang_select = Select(title='', value="EN", options=list(translations.keys()), width=65)     

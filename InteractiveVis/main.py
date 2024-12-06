@@ -15,6 +15,7 @@ def select_language_callback(attr, old_value, new_value):
     """
     Called if user has selected a new language.
     """
+    if debug: print("Called select_language_callback().")
     v.lexicon = translations[new_value]
     v.curdoc().hold()
     
@@ -33,7 +34,7 @@ def select_language_callback(attr, old_value, new_value):
     v.cluster_peak_div.update(text=v.lexicon["peak"])
     v.age_spinner.update(title=v.lexicon["age"])
     v.sex_select.update(title=v.lexicon["sex"])
-    v.sex_select.update(options=v.lexicon["sex_catg"])
+    # v.sex_select.update(options=v.lexicon["sex_catg"]) # Causing incorrect sex displays when translated, so using combined lang options
     v.tiv_spinner.update(title=v.lexicon["tiv"])
     v.field_strength_select.update(title=v.lexicon["field_strength"])
     v.file_uploaded_lbl.update(text=v.lexicon["upload_status1"])
@@ -51,6 +52,8 @@ def select_language_callback(attr, old_value, new_value):
     v.p_color_bar.add_layout(v.color_bar)
     if m.pred is None:
         v.prediction_label.update(text = v.lexicon["scan_evaluate"])
+    elif int(m.pred) == 0 and not v.processing_done:
+        v.prediction_label.update(text = v.lexicon["enter_and_process"])
     else:
         v.prediction_label.update(text = v.lexicon["likelihood"] % m.pred)
     v.color_mode.update(label=v.lexicon["theme_label"])
@@ -162,31 +165,34 @@ def click_sagittal_callback(event):
 
 
 def select_subject_worker():
+    """
+    Handles the final layout of the Bokeh layout.
+
+    Sets the subject image and background based on the selected subject type (internal or user-uploaded),
+    updates the covariate GUI elements, and redraws the coronal, axial, and sagittal plots for the currently
+    selected scan. Concludes by enabling the widgets.
+
+    :return: None
+    """
     if debug: print("Called select_subject_worker().")
     v.curdoc().hold()
-    if not v.firstrun:  # Avoid duplicate set_subject() call when application first starts.
-        if (v.subject_select.value != "User Upload"):
-            if debug: print("Using internal scan.....")
-            m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
-        else:
-            if debug: print("Using uploaded scan.....")
-            if v.error_flag:
-                v.error_flag = False
-                pass
-            else:
-                m.set_subj_img(m.uploaded_residual)
-                m.set_subj_bg(m.uploaded_bg_img)
+    # if not v.firstrun:  # Avoid duplicate set_subject() call when application first starts. # redundant
     if (v.subject_select.value != "User Upload"):
+        if debug: print("Using internal scan.....")
+        m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
         v.update_covariate_info(index_lst[sorted_xs.index(
             v.subject_select.value)], None)  # called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
         v.freeze_covariates()
     else:
+        if debug: print("Using uploaded scan.....")
+        m.set_subj_img(m.uploaded_residual)
+        m.set_subj_bg(m.uploaded_bg_img)
         v.update_covariate_info(None, m.entered_covariates_df)
         v.make_covariates_editable()
-    if m.pred is None:
-        v.prediction_label.text = v.lexicon["scan_evaluate"]
-    else:
-        v.prediction_label.text = v.lexicon["likelihood"] % m.pred
+    # if m.pred is None:
+    #     v.prediction_label.text = v.lexicon["scan_evaluate"]
+    # else:
+    v.prediction_label.text = v.lexicon["likelihood"] % m.pred
     v.p_frontal.title.text=" "
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
@@ -200,10 +206,8 @@ def select_subject_worker():
     v.plot_axial()
     v.plot_sagittal()
     v.update_cluster_divs()
-    #if v.firstrun:
     v.enable_widgets()
-    #else:
-    #	pass
+    v.update_processing_label(make_visible=False)
     v.curdoc().unhold()
 
 def select_subject_callback(attr, old, new):
@@ -220,16 +224,16 @@ def select_subject_callback(attr, old, new):
     """
     if debug: print("Called select_subject_callback().")
 
-    v.disable_widgets()
-    v.freeze_covariates()
-
-    # This branching is necessary because the 'next tick' occurs only after the entire main script is run.
-    # In that case firstrun would already be set to False and the v.update_guide_*() calls would not initialize properly.
-    if v.firstrun:
-        select_subject_worker()
+    # Ensure subject_worker is not triggered before bg and residual data are calculated.
+    # This avoids initializing with empty data, which can lead to incorrect label behavior.
+    if v.subject_select.value == "User Upload" and not v.processing_done:
+        pass
     else:
+        v.update_processing_label(make_visible=True)
+        v.prediction_label.text = v.lexicon["scan_evaluate"]
+        v.disable_widgets()
+        v.freeze_covariates()
         v.curdoc().add_next_tick_callback(select_subject_worker)
-
 
 def select_model_worker():
     """
@@ -254,9 +258,11 @@ def select_model_callback(attr, old, new):
     :param new: the new selected model name ("newmodel/newmodel_cb_....") in the model selection box, not used
     :return: None
     """
-    v.disable_widgets()
-
     if debug: print("Called select_model_callback().")
+
+    v.update_processing_label(make_visible=True)
+    v.prediction_label.text = v.lexicon["scan_evaluate"]
+    v.disable_widgets()
     v.curdoc().add_next_tick_callback(select_model_worker)
 
 
@@ -467,10 +473,49 @@ def flip_frontal_callback(attr):
     v.update_guide_sagittal()
 
 def reset_scan_overlay():
-        time.sleep(5)
-        v.update_scan_label(make_visible=False)
-        v.subject_select.update(options=(["User Upload"]+sorted_xs))
-        v.file_uploaded_lbl.update(visible=True)
+    """
+    Resets the scan overlay settings for the uploaded scan process.
+
+    Activates user interface widgets and updates the subject selection to include "User Upload", defaulting to it. 
+    Temporarily disables model and subject selection to limit interaction until the uploaded scan is evaluated.
+    Updates the visibility of UI labels related to file uploads and scan processing status.
+
+    :return: None
+    """
+    if debug: print("Called reset_scan_overlay().")
+    # time.sleep(5) # redundant, using next_tick
+    v.enable_widgets()
+    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload") # Uploaded scan reference is added to "Subjects:""list
+    # Limit user control until the uploaded scan is evaluated. (*)
+    v.model_select.update(disabled=True)
+    v.subject_select.update(disabled=True)      
+    v.file_uploaded_lbl.update(visible=True)
+    v.update_scan_label(make_visible=False)
+
+def change_visualization_to_empty_overlay():
+    """
+    Sets an overlay with empty residuals to the coronal, axial, and sagittal plots for the currently
+    uploaded scan.
+
+    :return: None
+    """
+    if debug: print("Called change_visualization_to_empty_overlay()")
+    m.reset_prepared_data(m.uploaded_bg_img) # set empty residuals
+    m.set_subj_img(m.uploaded_residual)
+    m.set_subj_bg(m.uploaded_bg_img)
+    v.prediction_label.text = v.lexicon["enter_and_process"]
+    v.render_backround()
+    v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
+    v.update_cluster_sizes_histogram()
+    v.update_guide_frontal()
+    v.update_guide_axial()
+    v.update_guide_sagittal()
+    v.plot_frontal()
+    v.plot_axial()
+    v.plot_sagittal()
+    v.update_cluster_divs()
+    v.make_covariates_editable()
+    v.curdoc().add_next_tick_callback(reset_scan_overlay)
 
 def upload_scan_callback(attr, old, new):
     """
@@ -485,50 +530,26 @@ def upload_scan_callback(attr, old, new):
     :return: None
     """
     if debug: print("Called upload_scan_callback()")
+
     is_zipped = v.scan_upload.filename.endswith('.gz')
     # Set initial average values:
     v.age_spinner.update(value=73)
-    v.sex_select.update(value='N/A')
+    v.sex_select.update(value=v.lexicon["sex_catg"][2])
     v.tiv_spinner.update(value=1400)
     v.field_strength_select.update(value='3.0')
+    # disabling processing flag for every user upload
+    v.processing_done = False
     try:
-        m.load_nifti(new, is_zipped)
         #Pops up "Uploading scan..." overlay
         v.update_scan_label(make_visible=True)
-        v.curdoc().add_next_tick_callback(reset_scan_overlay)
+        v.disable_widgets()
+        v.freeze_covariates()
+        m.load_nifti(new, is_zipped)
+        v.curdoc().add_next_tick_callback(change_visualization_to_empty_overlay)
     except Exception as e:
         v.prediction_label.text = str(type(e).__name__)+": "+str(e)
         print("Exception: {}".format(type(e).__name__))
         print("Exception message: {}".format(e))
-    v.make_covariates_editable()
-
-
-def reset_visualization_to_empty_overlay():
-    """
-    Resets the visual elements to display empty overlay.
-    Currently only being used/invoked when processing own data uploaded by the user.
-
-    :return: None
-    """
-    v.processing_label.update(visible=True)
-    v.file_uploaded_lbl.update(visible=False)
-    # temporarily show this subject with empty overlay:
-    m.reset_prepared_data(m.uploaded_bg_img)
-    m.set_subj_img(m.uploaded_residual)
-    m.set_subj_bg(m.uploaded_bg_img)
-    m.pred = None
-    v.prediction_label.text = v.lexicon["scan_evaluate"]
-    v.render_backround()
-    v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
-    v.update_cluster_sizes_histogram()
-    v.update_guide_frontal()
-    v.update_guide_axial()
-    v.update_guide_sagittal()
-    v.plot_frontal()
-    v.plot_axial()
-    v.plot_sagittal()
-    v.update_cluster_divs()
-
 
 def prepare_data_worker():
     """
@@ -539,10 +560,10 @@ def prepare_data_worker():
     print("Called prepare_data_worker()")
     # prepare the data for CNN model input, which might take a while:
     m.prepare_data(m.uploaded_bg_img)
+    v.processing_done = True # enabling processing flag
     # update the visualization:
-    select_subject_worker()
-    v.enable_widgets()
-
+    v.curdoc().add_next_tick_callback(select_subject_worker)
+    # v.enable_widgets() # redundant; because subject_worker already does it
 
 def enter_covariates_callback():
     """
@@ -552,18 +573,18 @@ def enter_covariates_callback():
     :return: None
     """
     if debug: print("Called enter_covariates_callback")
+    m.pred = None  # revert the prev prediction
+    v.update_processing_label(make_visible=True)
+    v.file_uploaded_lbl.update(visible=False)
+    v.prediction_label.text = v.lexicon["scan_evaluate"]
     v.disable_widgets()
-    
+    v.freeze_covariates()
     sex_identifier = 0.5
     if (v.sex_select.value == v.lexicon["sex_catg"][1]):
         sex_identifier = 1.0
     elif (v.sex_select.value == v.lexicon["sex_catg"][0]):
         sex_identifier = 0.0
     m.set_covariates(v.age_spinner.value, sex_identifier, v.tiv_spinner.value, float(v.field_strength_select.value))
-    
-    # Add user upload to selection box:
-    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload")
-    reset_visualization_to_empty_overlay()
     v.curdoc().add_next_tick_callback(prepare_data_worker) # early return, do the heavy work on next tick
 
 
@@ -626,17 +647,25 @@ v.curdoc().add_root(v.layout)
 v.curdoc().title = 'Online AD brain viewer'
 
 # Set callbacks for events:
-v.toggle_regions.on_click(click_show_regions_callback)
 v.subject_select.on_change('value', select_subject_callback)
+v.model_select.on_change('value', select_model_callback)
+v.prepare_button.on_click(enter_covariates_callback)
+v.scan_upload.on_change("value", upload_scan_callback)
+
 # callback for language
 v.lang_select.on_change("value", select_language_callback)
+
 # callback for background
 v.color_mode.js_on_click(switch_theme_callback)
 
 v.curdoc().hold()
-select_subject_callback('', '', '')  # call once
+# select_subject_callback('', '', '') # redundant, instead directly calling select_subject_worker
+if debug: print(f"Flag check firstrun: {v.firstrun}")
+if v.firstrun: select_subject_worker() # call once at the application start with a preselected internal scan (AD ID - 4001)
 # v.curdoc().unhold() #Redundant, is already unhold in select_subject_worker() call.
 v.firstrun = False
+
+# Set callbacks for plot control events
 v.slice_slider_frontal.on_change('value', set_slice_frontal_callback)
 v.slice_slider_axial.on_change('value', set_slice_axial_callback)
 v.slice_slider_sagittal.on_change('value', set_slice_sagittal_callback)
@@ -645,11 +674,7 @@ v.threshold_slider.on_change('value', apply_thresholds_callback)
 v.clustersize_slider.on_change('value', apply_thresholds_callback)
 v.transparency_slider.on_change('value', set_transparency_callback)
 v.toggle_transparency.on_click(click_transparency_change)
-
-v.model_select.on_change('value', select_model_callback)
-
-v.prepare_button.on_click(enter_covariates_callback)
-v.scan_upload.on_change("value", upload_scan_callback)
+v.toggle_regions.on_click(click_show_regions_callback)
 
 # automatically close bokeh after browser window was closed
 # def close_session(session_context):
