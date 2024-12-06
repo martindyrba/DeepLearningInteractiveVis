@@ -15,7 +15,7 @@
     "regiontypes": "",
     "age": "Alter:",
     "sex": "Gender:",
-    "sex_catg": ["male/männlich", "female/weiblich", "NA/divers"],
+    "sex_catg": ["männlich", "weiblich", "divers"],
 	"tiv": "TIV:",
     "field_strength": "MRT Feldstärke [T]:",
     "upload_status0": "Keine Datei ausgewählt",
