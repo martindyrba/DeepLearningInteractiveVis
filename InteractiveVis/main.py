@@ -16,6 +16,8 @@ def select_language_callback(attr, old_value, new_value):
     Called if user has selected a new language.
     """
     if debug: print("Called select_language_callback().")
+    # keep track of current sex
+    sex_index = v.lexicon["sex_catg"].index(v.sex_select.value)
     v.lexicon = translations[new_value]
     v.curdoc().hold()
     
@@ -34,7 +36,7 @@ def select_language_callback(attr, old_value, new_value):
     v.cluster_peak_div.update(text=v.lexicon["peak"])
     v.age_spinner.update(title=v.lexicon["age"])
     v.sex_select.update(title=v.lexicon["sex"])
-    # v.sex_select.update(options=v.lexicon["sex_catg"]) # Causing incorrect sex displays when translated, so using combined lang options
+    v.sex_select.update(options=v.lexicon["sex_catg"], value=v.lexicon["sex_catg"][sex_index])
     v.tiv_spinner.update(title=v.lexicon["tiv"])
     v.field_strength_select.update(title=v.lexicon["field_strength"])
     v.file_uploaded_lbl.update(text=v.lexicon["upload_status1"])
@@ -227,6 +229,7 @@ def select_subject_callback(attr, old, new):
     # Ensure subject_worker is not triggered before bg and residual data are calculated.
     # This avoids initializing with empty data, which can lead to incorrect label behavior.
     if v.subject_select.value == "User Upload" and not v.processing_done:
+        if debug: print("processing not done, skipping the select_subject_callback")
         pass
     else:
         v.update_processing_label(make_visible=True)

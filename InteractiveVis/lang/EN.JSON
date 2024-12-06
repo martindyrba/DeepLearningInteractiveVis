@@ -15,7 +15,7 @@
     "regiontypes": "",
     "age": "Age:",
     "sex": "Sex:",
-    "sex_catg": ["male/männlich", "female/weiblich", "NA/divers"],
+    "sex_catg": ["male", "female", "N/A"],
 	"tiv": "TIV:",
     "field_strength": "Field Strength [T]:",
     "upload_status0": "No file chosen",
