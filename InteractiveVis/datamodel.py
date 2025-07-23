@@ -476,21 +476,28 @@ class Model:
                     # disable multicore processing in Windows as the ProcessPoolExecutor does not seem to work properly
                     # (trows ModuleNotFoundError: No module named 'datamodel')
                     self.executor = concurrent.futures.ThreadPoolExecutor(1) # using single-threaded ThreadPoolExecutor isntead
-                    self.num_threads = 1
+                    effective_threads = 1
                     self.step_size = img_arr.shape[2]
                 else: # Linux, MacOS
-                    self.executor = concurrent.futures.ProcessPoolExecutor(self.num_threads) # change to ThreadPoolExecutor for better debugging
-                    self.step_size = np.ceil(img_arr.shape[2] / self.num_threads).astype(int)
-            
-            print("Submitting n=", str(self.num_threads), " parallel workers for processing")
+                    effective_threads = min(32, self.num_threads) # limit to 32 threads
+                    self.executor = concurrent.futures.ProcessPoolExecutor(effective_threads) # change to ThreadPoolExecutor for better debugging
+                    self.step_size = np.ceil(img_arr.shape[2] / effective_threads).astype(int)
+
+            print("Submitting n=", str(effective_threads), " parallel workers for processing")
             futures = []
-            for i in range(self.num_threads):
-                args = (covariates,
-                        self.lmarray,
-                        img_arr,
-                        i*self.step_size, 
-                        min((i+1)*self.step_size,img_arr.shape[2]))
-                futures.append(self.executor.submit(do_prepare, *args))
+            for i in range(effective_threads):
+                first_slice = i * self.step_size
+                last_slice = min((i + 1) * self.step_size, img_arr.shape[2])
+                if first_slice < last_slice: # only submit if there are slices to process
+                    args = (covariates,
+                            self.lmarray,
+                            img_arr,
+                            first_slice, 
+                            last_slice)
+                    future = self.executor.submit(do_prepare, *args)
+                    futures.append(future)
+                else: 
+                    if debug: print("Skipping thread ", str(i), ", there are no slices to process.")
             concurrent.futures.wait(futures)
             if debug:
                 print(futures)
