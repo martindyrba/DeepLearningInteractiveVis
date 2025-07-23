@@ -476,16 +476,16 @@ class Model:
                     # disable multicore processing in Windows as the ProcessPoolExecutor does not seem to work properly
                     # (trows ModuleNotFoundError: No module named 'datamodel')
                     self.executor = concurrent.futures.ThreadPoolExecutor(1) # using single-threaded ThreadPoolExecutor isntead
-                    effective_threads = 1
+                    self.effective_threads = 1
                     self.step_size = img_arr.shape[2]
                 else: # Linux, MacOS
-                    effective_threads = min(32, self.num_threads) # limit to 32 threads
-                    self.executor = concurrent.futures.ProcessPoolExecutor(effective_threads) # change to ThreadPoolExecutor for better debugging
-                    self.step_size = np.ceil(img_arr.shape[2] / effective_threads).astype(int)
+                    self.effective_threads = min(32, self.num_threads) # limit to 32 threads
+                    self.executor = concurrent.futures.ProcessPoolExecutor(self.effective_threads) # change to ThreadPoolExecutor for better debugging
+                    self.step_size = np.ceil(img_arr.shape[2] / self.effective_threads).astype(int)
 
-            print("Submitting n=", str(effective_threads), " parallel workers for processing")
+            print("Submitting n=", str(self.effective_threads), " parallel workers for processing")
             futures = []
-            for i in range(effective_threads):
+            for i in range(self.effective_threads):
                 first_slice = i * self.step_size
                 last_slice = min((i + 1) * self.step_size, img_arr.shape[2])
                 if first_slice < last_slice: # only submit if there are slices to process
@@ -528,6 +528,7 @@ class Model:
         self.lmarray = None # linear model coefficients used for covariate cleaning of user upload
         self.executor = None # multithreading executor for parallel processing (used for processing)
         self.num_threads = multiprocessing.cpu_count()
+        self.effective_threads = None
         self.step_size = None # array index step size for multithreading
 
         # load selected model data from cache or disk:
