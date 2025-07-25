@@ -25,6 +25,7 @@
     "processing_label": "Processing Scan...",
     "scan_evaluate": "Scan is being evaluated...",
     "likelihood": "Estimated likelihood of Alzheimer's: %0.0f%%",
+    "calibrated_likelihood": "Likelihood of Alzheimer's: %0.0f%% (calibrated probability: %0.0f%%, CI: [%0.0f%%, %0.0f%%])",
     "enter_and_process": "Please enter patient data and start processing...",
     "c_slice": "Coronal slice",
     "a_slice": "Axial slice",
@@ -32,5 +33,7 @@
     "relv_plot_title": "Relevance>threshold per slice: ",
     "relv_scale_title": "Relevance",
     "t_frontal_view": "Flip L/R orientation",
-    "theme_label": "Switch to Dark/Light Mode"
+    "theme_label": "Switch to Dark/Light Mode",
+    "cohort_calibration": "Cohort Calibration:",
+    "calibration_datasets": ["AIBL", "ADNI2", "ADNI3", "DELCODE"]
 }

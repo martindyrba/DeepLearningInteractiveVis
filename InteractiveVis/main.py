@@ -57,7 +57,7 @@ def select_language_callback(attr, old_value, new_value):
     elif int(m.pred) == 0 and not v.processing_done:
         v.prediction_label.update(text = v.lexicon["enter_and_process"])
     else:
-        v.prediction_label.update(text = v.lexicon["likelihood"] % m.pred)
+        v.prediction_label.update(text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci))
     v.color_mode.update(label=v.lexicon["theme_label"])
 
     v.curdoc().add_root(v.layout)
@@ -165,6 +165,24 @@ def click_sagittal_callback(event):
     v.slice_slider_axial.update(value=y)
     if not v.toggle_regions.active: v.plot_frontal()
 
+def select_cohort_calibration_callback(attr, old, new):
+    """
+    Called if user has selected a new cohort calibration dataset.
+
+    This will get new calibrated prediction and update the prediction label.
+    :param attr: not used
+    :param old: not used
+    :param new: not used
+    :return: None
+    """
+    if debug: print("Called select_cohort_calibration_callback().")
+    
+    # Get new calibrated prediction
+    if m.pred is not None:
+        m.calibrated_pred, m.lower_ci, m.upper_ci = m.get_calibrated_prediction(v.cohort_calibration_select.value, m.pred)
+        # Update the prediction label with the new likelihood
+        v.prediction_label.text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci)
+    
 
 def select_subject_worker():
     """
@@ -178,10 +196,11 @@ def select_subject_worker():
     """
     if debug: print("Called select_subject_worker().")
     v.curdoc().hold()
-    # if not v.firstrun:  # Avoid duplicate set_subject() call when application first starts. # redundant
+    
     if (v.subject_select.value != "User Upload"):
         if debug: print("Using internal scan.....")
-        m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
+        if not v.firstrun:  # Avoid duplicate set_subject() call when application first starts.
+            m.set_subject(index_lst[sorted_xs.index(v.subject_select.value)])  # this parameter is subj_id
         v.update_covariate_info(index_lst[sorted_xs.index(
             v.subject_select.value)], None)  # called with subj_id; corresponding RID/sid would be m.grps.iloc[m.index_lst[m.sorted_xs.index(v.subject_select.value)], 1]
         v.freeze_covariates()
@@ -194,7 +213,7 @@ def select_subject_worker():
     # if m.pred is None:
     #     v.prediction_label.text = v.lexicon["scan_evaluate"]
     # else:
-    v.prediction_label.text = v.lexicon["likelihood"] % m.pred
+    v.prediction_label.text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci)
     v.p_frontal.title.text=" "
     v.p_axial.title.text = " "
     v.p_sagittal.title.text = " "
@@ -475,24 +494,23 @@ def flip_frontal_callback(attr):
     v.plot_axial()
     v.update_guide_sagittal()
 
-def reset_scan_overlay():
+def restrict_controls_for_uploaded_scan():
     """
-    Resets the scan overlay settings for the uploaded scan process.
+    Resets scan overlay for uploaded scans, enables UI widgets, sets subject to "User Upload",
+    and disables some user controls until evaluation.
 
-    Activates user interface widgets and updates the subject selection to include "User Upload", defaulting to it. 
-    Temporarily disables model and subject selection to limit interaction until the uploaded scan is evaluated.
-    Updates the visibility of UI labels related to file uploads and scan processing status.
-
-    :return: None
+    return: None
     """
-    if debug: print("Called reset_scan_overlay().")
-    # time.sleep(5) # redundant, using next_tick
-    v.enable_widgets()
-    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload") # Uploaded scan reference is added to "Subjects:""list
-    # Limit user control until the uploaded scan is evaluated. (*)
+    if debug: print("Called restrict_controls_for_uploaded_scan().")
+    v.subject_select.update(options=(["User Upload"]+sorted_xs), value="User Upload") # Uploaded scan reference is added to "Subjects:" list
     v.model_select.update(disabled=True)
-    v.subject_select.update(disabled=True)      
-    v.file_uploaded_lbl.update(visible=True)
+    v.subject_select.update(disabled=True)
+    v.file_uploaded_lbl.update(visible=True) # redundant, no visible change
+    v.cohort_calibration_select.update(disabled=True)
+    v.threshold_slider.update(disabled=True)
+    v.clustersize_slider.update(disabled=True)
+    v.transparency_slider.update(disabled=True)
+    v.toggle_transparency.update(disabled=True)
     v.update_scan_label(make_visible=False)
 
 def change_visualization_to_empty_overlay():
@@ -503,12 +521,13 @@ def change_visualization_to_empty_overlay():
     :return: None
     """
     if debug: print("Called change_visualization_to_empty_overlay()")
-    m.reset_prepared_data(m.uploaded_bg_img) # set empty residuals
-    m.set_subj_img(m.uploaded_residual)
+    # m.reset_prepared_data(m.uploaded_bg_img) # set empty residuals
+    # m.set_subj_img(m.uploaded_residual) # expensive call, we just need an empty overlay
+    m.set_empty_relevance_map() # set empty relevance map
     m.set_subj_bg(m.uploaded_bg_img)
     v.prediction_label.text = v.lexicon["enter_and_process"]
     v.render_backround()
-    v.apply_thresholds(m.relevance_map, threshold=v.threshold_slider.value, cluster_size=v.clustersize_slider.value)
+    v.apply_thresholds(m.relevance_map)
     v.update_cluster_sizes_histogram()
     v.update_guide_frontal()
     v.update_guide_axial()
@@ -518,7 +537,8 @@ def change_visualization_to_empty_overlay():
     v.plot_sagittal()
     v.update_cluster_divs()
     v.make_covariates_editable()
-    v.curdoc().add_next_tick_callback(reset_scan_overlay)
+    v.enable_widgets()
+    v.curdoc().add_next_tick_callback(restrict_controls_for_uploaded_scan)
 
 def upload_scan_callback(attr, old, new):
     """
@@ -576,7 +596,10 @@ def enter_covariates_callback():
     :return: None
     """
     if debug: print("Called enter_covariates_callback")
-    m.pred = None  # revert the prev prediction
+    
+    # Reset predictions (redundant, already resetted in set_empty_relevance_map() method)
+    # m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci = None, None, None, None
+
     v.update_processing_label(make_visible=True)
     v.file_uploaded_lbl.update(visible=False)
     v.prediction_label.text = v.lexicon["scan_evaluate"]
@@ -654,18 +677,18 @@ v.subject_select.on_change('value', select_subject_callback)
 v.model_select.on_change('value', select_model_callback)
 v.prepare_button.on_click(enter_covariates_callback)
 v.scan_upload.on_change("value", upload_scan_callback)
-
+v.cohort_calibration_select.on_change("value", select_cohort_calibration_callback)
 # callback for language
 v.lang_select.on_change("value", select_language_callback)
 
 # callback for background
 v.color_mode.js_on_click(switch_theme_callback)
 
-v.curdoc().hold()
+# v.curdoc().hold()
 # select_subject_callback('', '', '') # redundant, instead directly calling select_subject_worker
 if debug: print(f"Flag check firstrun: {v.firstrun}")
-if v.firstrun: select_subject_worker() # call once at the application start with a preselected internal scan (AD ID - 4001)
-# v.curdoc().unhold() #Redundant, is already unhold in select_subject_worker() call.
+if v.firstrun: 
+    select_subject_worker() # call once at the application start
 v.firstrun = False
 
 # Set callbacks for plot control events

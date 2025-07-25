@@ -15,14 +15,11 @@ from matplotlib import cm
 from matplotlib.colors import rgb2hex
 from skimage.measure import label, regionprops
 
-from config import scale_factor
+from config import scale_factor, translations
 # Constants for first initialization/getter methods; no write access needed.
 from datamodel import sorted_xs, stored_models, selected_model, get_region_name, get_region_id, aal_drawn, age, cov_idx, \
     sex, tiv, field
-from config import debug, flip_left_right_in_frontal_plot
-
-#get the translations data from config
-from config import translations
+from config import debug, flip_left_right_in_frontal_plot, dataset_name
 
 # Adjusted global color palette for ColorBar annotation, because bokeh does not support some palettes by default:
 overlay_colormap = cm.get_cmap('RdYlGn_r')
@@ -446,10 +443,13 @@ class View:
         self.threshold_slider.update(disabled=True)
         self.clustersize_slider.update(disabled=True)
         self.transparency_slider.update(disabled=True)
+        self.toggle_transparency.update(disabled=True)
         self.toggle_regions.update(disabled=True)
         self.flip_frontal_view.update(disabled=True)
         self.lang_select.update(disabled=True)
         self.color_mode.update(disabled=True)
+        self.cohort_calibration_select.update(disabled=True)
+
     def enable_widgets(self):
         """
         Enable user interaction with the widgets again.
@@ -465,10 +465,12 @@ class View:
         self.threshold_slider.update(disabled=False)
         self.clustersize_slider.update(disabled=False)
         self.transparency_slider.update(disabled=False)
+        self.toggle_transparency.update(disabled=False)
         self.toggle_regions.update(disabled=False)
         self.flip_frontal_view.update(disabled=False)
         self.lang_select.update(disabled=False)
         self.color_mode.update(disabled=False)
+        self.cohort_calibration_select.update(disabled=False)
 
     def make_covariates_editable(self):
         """
@@ -481,6 +483,7 @@ class View:
         self.tiv_spinner.update(disabled=False)
         self.field_strength_select.update(disabled=False)
         self.prepare_button.update(disabled=False)
+
 
     def freeze_covariates(self):
         """
@@ -712,11 +715,20 @@ class View:
         self.cluster_peak_div = Div(text=self.lexicon["peak"] + "0", css_classes=["cluster_divs"])
 
         # see InteractiveVis/static/ for default formatting/style definitions
-        self.age_spinner = Spinner(title=self.lexicon["age"], placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True) #no subject selected at time of initialization
-        self.sex_select = Select(title=self.lexicon["sex"], value="N/A", options=self.lexicon["sex_catg"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.tiv_spinner = Spinner(title=self.lexicon["tiv"], placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        self.field_strength_select = Select(title=self.lexicon["field_strength"], value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2 -10), disabled=True)
-        
+        self.age_spinner = Spinner(title=self.lexicon["age"], placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True) #no subject selected at time of initialization
+        self.sex_select = Select(title=self.lexicon["sex"], value="N/A", options=self.lexicon["sex_catg"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True)
+        self.tiv_spinner = Spinner(title=self.lexicon["tiv"], placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True)
+        self.field_strength_select = Select(title=self.lexicon["field_strength"], value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True) # -10 -> -15
+
+        calibration_cohorts = ['AIBL', 'ADNI2', 'ADNI3', 'DELCODE']  # Add actual available datasets
+        self.cohort_calibration_select = Select(
+            title=self.lexicon["cohort_calibration"], 
+            value=dataset_name,  # Use config default
+            options=calibration_cohorts,  # Use actual dataset names
+            width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), 
+            disabled=True
+        )
+
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
         # parent figure in Bokeh:
         self.p_color_bar = figure(plot_width=125,
@@ -749,7 +761,7 @@ class View:
         	                      background_fill_alpha=0,
         	                      border_fill_color='#CCBFB3',
         	                      border_fill_alpha=0,
-                                  plot_width=300,
+                                  plot_width=200, # 300 -> 200
                                   plot_height=20,
                                   margin=(0,0,0,15),
                                   title='',
@@ -769,7 +781,7 @@ class View:
         self.prediction_label = Label(
             text=self.lexicon["likelihood"], render_mode='css',
             text_align='center',
-            text_font_size='17px',
+            text_font_size='16px',
             text_font_style='bold',
             text_color='#888888',
         	background_fill_alpha=0,
@@ -802,7 +814,8 @@ class View:
                 column(self.cluster_size_div, self.cluster_mean_div, self.cluster_peak_div)
             ),
             column(
-                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select,column(row(self.scan_upload),row(self.p_file_up_lbl)), css_classes=["subject_divs"]),
+                row(self.scan_upload),
+                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.cohort_calibration_select,self.p_file_up_lbl, css_classes=["subject_divs"]),
                 row(column(self.prepare_button),
                     column(Spacer(height=40, width=125, sizing_mode='scale_width')),
                     column(self.lang_title_div),

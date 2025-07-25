@@ -25,6 +25,7 @@
     "processing_label": "Verarbeitung läuft...",
     "scan_evaluate": "Scan wird ausgewertet...",
     "likelihood": "Wahrscheinlichkeit für M. Alzheimer: %0.0f%%",
+    "calibrated_likelihood": "Likelihood für M. Alzheimer: %0.0f%% (Kalibrierte Wahrscheinlichkeit: %0.0f%%, CI: [%0.0f%%, %0.0f%%])",
     "enter_and_process": "Warte auf Eingabe um fortzufahren...",
     "c_slice": "Koronare Schicht",
     "a_slice": "Axiale Schicht",
@@ -32,5 +33,7 @@
     "relv_plot_title": "Aggregierte Relevanz pro Schicht: ",
     "relv_scale_title": "Relevanz",
     "t_frontal_view": "Tausche Links/Rechts in d. Darstellung",
-    "theme_label": "Wechsle zu hellem/dunklem Modus"
+    "theme_label": "Wechsle zu hellem/dunklem Modus",
+    "cohort_calibration": "Cohort Calibration:",
+    "calibration_datasets": ["AIBL", "ADNI2", "ADNI3", "DELCODE"]
 }
