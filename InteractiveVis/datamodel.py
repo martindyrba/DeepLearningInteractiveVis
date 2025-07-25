@@ -26,13 +26,17 @@ import concurrent.futures # this module was introduced in Python 3.2; use the fu
 
 from config import debug, selected_neuron, adaptive_relevance_scaling, disable_gpu_for_tensorflow, stored_models, selected_model, \
     background_images_path, residuals_path, covariates_excel_file, covariates_excel_sheet, \
-    do_model_prefetch, linear_model_path, data_files
+    do_model_prefetch, linear_model_path, data_files, do_calmodel_prefetch, dataset_name, calibration_models, selected_calibration_model
 
 if debug:
     print("stored_models = ")
     print(stored_models)
     print("selected_model = ")
     print(selected_model)
+    print("calibration_models = ")
+    print(calibration_models)
+    print("selected_calibration_model = ")
+    print(selected_calibration_model)
 
 # Import data from Excel sheet
 df = pd.read_excel(covariates_excel_file, sheet_name=covariates_excel_sheet) #, engine='openpyxl'
@@ -169,12 +173,35 @@ def load_model_from_disk_into_cache(model_path):
     print('Analyzer created.')
     return model_cache[model_path]["mymodel"], model_cache[model_path]["analyzer"]
 
+# This function loads model parameters from a .npz file and returns them as a dictionary.
+def load_calibration_model_from_disk_into_cache(path):
+    """
+    Load model parameters from a .npz file.
+
+    Parameters:
+        path: str, file path to load from
+
+    Returns:
+        dict: loaded calibration models
+    """
+    global model_cache
+    models = np.load(path, allow_pickle=True)
+    if debug: print("Loading " + path + " from disk...")
+    model_cache[path] = dict()
+    model_cache[path]["calmodel"] = {key: models[key] for key in models}
+    return model_cache[path]["calmodel"]
 
 # Preload CNN models from disk:
 if do_model_prefetch:
     print("Preloading all " + str(len(stored_models)) + " models. This may take a while...")
     for model_path in stored_models:
         load_model_from_disk_into_cache(model_path)
+
+# Preload calibration models from disk:
+if do_calmodel_prefetch:
+    print("Preloading all " + str(len(calibration_models)) + " calibration models...")
+    for cal_model_path in calibration_models:
+        load_calibration_model_from_disk_into_cache(cal_model_path)
 
 # load atlas nifti data:
 img = nib.load('aal/aal.nii.gz')
@@ -269,7 +296,7 @@ def do_prepare(covs, lmcoeffs, data, first_slice, last_slice):
 	out_size = list(data.shape)
 	out_size[2] = last_slice-first_slice
 	out = np.zeros(tuple(out_size), dtype=np.float32)
-	#print(out.shape)
+	# print(out.shape)
 	if debug: print('Processing depth slices ', str(first_slice), ' to ', str(last_slice-1), ' of ', str(data.shape[2]))
 	for k in range(first_slice, last_slice):
 		for j in range(data.shape[1]):
@@ -305,6 +332,64 @@ class Model:
             (self.mymodel, self.analyzer) = load_model_from_disk_into_cache(self.selected_model)
             if debug: print("Model loaded from disk.")
 
+    def set_calibration_model(self, model_name):
+        """
+        Callback for a new calibration model being selected by path/file name.
+
+        :param str model_name: the path of the new calibration model file to be selected.
+        :return: None
+        """
+        global model_cache
+        if debug: print("Called set_calibration_model().")
+
+        self.selected_calibration_model = model_name
+        try:
+            self.calmodel = model_cache[self.selected_calibration_model]["calmodel"]
+            if debug: print("Calibration model loaded from cache.")
+        except KeyError:
+            self.calmodel = load_calibration_model_from_disk_into_cache(self.selected_calibration_model)
+            if debug: print("Calibration model loaded from disk.")
+
+    def get_calibrated_prediction(self, dataset_name, pred):
+        """
+        Get calibrated prediction using Isotonic Regression model.
+
+        Parameters:
+        dataset_name: Name of the dataset to use for prediction.
+        pred: Single float value (CNN model prediction).
+
+        Returns:
+        tuple: (calibrated_prediction, lower_CI, upper_CI) as floats
+        """
+        if debug: print("Called get_calibrated_prediction().")
+        
+        # Extract calibration arrays for the dataset
+        X_cal = self.calmodel[f'{dataset_name}_X_cal'].flatten()
+        y_mean = self.calmodel[f'{dataset_name}_y_mean'].flatten()
+        y_lower = self.calmodel[f'{dataset_name}_y_lower'].flatten()
+        y_upper = self.calmodel[f'{dataset_name}_y_upper'].flatten()
+        
+        # Convert single float input to calibration range (0-1)
+        if debug: print("Original prediction value: ", pred)
+        X_orig = pred / 100.0
+        
+        # Check if the original prediction is within the calibration range
+        if X_orig >= X_cal[0]:
+            idx = np.searchsorted(X_cal, X_orig, side='right') - 1
+            calibrated_pred = float(y_mean[idx])
+            lower_ci = float(y_lower[idx])
+            upper_ci = float(y_upper[idx])
+        else:
+            # Use first calibration point for values below range
+            calibrated_pred = float(y_mean[0])
+            lower_ci = float(y_lower[0])
+            upper_ci = float(y_upper[0])
+        
+        if debug: print("Calibrated prediction: ", calibrated_pred)
+
+        # Convert back to percentage format (0-100) to match original pred format
+        return (calibrated_pred * 100.0, lower_ci * 100.0, upper_ci * 100.0)
+
     def set_subject(self, subj_id):
         """
         Callback for a new subject being selected by id.
@@ -336,6 +421,28 @@ class Model:
         self.relevance_map = np.reshape(self.relevance_map, self.subj_img.shape[1:4])  # drop first index again
         self.relevance_map = scipy.ndimage.filters.gaussian_filter(self.relevance_map, sigma=0.8)  # smooth activity image
         self.relevance_map = scale_relevance_map(self.relevance_map, 1)
+        # Get calibrated prediction if we have a valid prediction
+        self.calibrated_pred, self.lower_ci, self.upper_ci = self.get_calibrated_prediction(dataset_name, self.pred)
+
+    def set_empty_relevance_map(self):
+        """
+        Sets an empty relevance map for the uploaded bg_image.
+        Resets predictions and confidence intervals.
+        
+        :param numpy.ndarray img: the prepared model input image
+        :return: None
+        """
+        if debug: print("Called set_empty_relevance_map().")
+        if hasattr(self, 'uploaded_bg_img') and self.uploaded_bg_img is not None:
+            # Create empty relevance map with same shape as background image (minus color channel)
+            self.relevance_map = np.zeros(self.uploaded_bg_img.shape[:3], dtype=np.float32)
+            # Reset predictions
+            self.pred = None
+            self.calibrated_pred = None
+            self.lower_ci = None
+            self.upper_ci = None
+        else:
+            if debug: print("Warning: No uploaded background image found")
 
     def set_subj_bg(self, bg):
         """
@@ -407,21 +514,6 @@ class Model:
         print("Successfully loaded uploaded nifti.")
         self.uploaded_bg_img = img_arr
         return img_arr
-
-
-    def reset_prepared_data(self, img_arr):
-        """
-        Resets the "prepared" data (residuals) to a zero-filled array.
-        This method is only being used for visualization purpose in order to already show an empty overlay while the data is still being processed/prepared.
-        :param img_arr: numpy array to prepare
-        :return: a copy of the img_array filled with zeros
-        :rtype: numpy.ndarray
-        """
-        if debug: print('Called reset_prepared_data().')
-        res = np.zeros(img_arr.shape, img_arr.dtype)
-        self.uploaded_residual = res
-        return res
-
 
     def set_covariates(self, age=73, sex=0.5, tiv=1400, field=2.86):
         """
@@ -530,9 +622,16 @@ class Model:
         self.num_threads = multiprocessing.cpu_count()
         self.effective_threads = None
         self.step_size = None # array index step size for multithreading
-
+        self.selected_calibration_model = None # filename of selected calibration model
+        self.calmodel = None # dict of calibration models for all datasets
+        self.calibrated_pred = None  # calibrated prediction for the current subject
+        self.lower_ci = None  # lower confidence interval
+        self.upper_ci = None  # upper confidence interval
         # load selected model data from cache or disk:
         self.set_model(selected_model)
+
+        # load selected calibration model data from cache or disk:
+        self.set_calibration_model(selected_calibration_model)
 
         # Call once to initialize first image and variables
         self.set_subject(index_lst[0])  # invoke with first subject
