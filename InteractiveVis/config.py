@@ -22,7 +22,7 @@ stored_models = sorted(
         glob.glob(os.path.join('model_checkpoints','*.best.hdf5'))) # get list of available models
 selected_model = os.path.join('model_checkpoints','resmodel_wb_whole_ds.hdf5') # model file name to load by default
 do_model_prefetch = False # load ALL models already at application startup --> this will take LONG and is only advised for long-running web/app servers
-do_calmodel_prefetch = True # load ALL calibration models at application startup
+do_calmodel_prefetch = False # load ALL calibration models at application startup
 flip_left_right_in_frontal_plot = False
 
 calibration_models = sorted(glob.glob(os.path.join('model_reg_calibrations','*_models.npz'))) # get list of available calibrated regression models
