@@ -34,6 +34,6 @@
     "relv_scale_title": "Relevance",
     "t_frontal_view": "Flip L/R orientation",
     "theme_label": "Switch to Dark/Light Mode",
-    "cohort_calibration": "Cohort Calibration:",
-    "calibration_datasets": ["AIBL", "ADNI2", "ADNI3", "DELCODE"]
+    "cohort_calibration": "Calibration Cohort:",
+    "calibration_datasets": { "AIBL":"Australia | AIBL", "ADNI2": "USA-old | ADNI2", "ADNI3": "USA-new | ADNI3", "DELCODE": "Germany | DELCODE"}
 }

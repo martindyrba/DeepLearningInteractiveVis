@@ -715,19 +715,48 @@ class View:
         self.cluster_peak_div = Div(text=self.lexicon["peak"] + "0", css_classes=["cluster_divs"])
 
         # see InteractiveVis/static/ for default formatting/style definitions
-        self.age_spinner = Spinner(title=self.lexicon["age"], placeholder="years", mode="int", low=55, high=99, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True) #no subject selected at time of initialization
-        self.sex_select = Select(title=self.lexicon["sex"], value="N/A", options=self.lexicon["sex_catg"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True)
-        self.tiv_spinner = Spinner(title=self.lexicon["tiv"], placeholder="cm³", mode="float", low=1000, high=2100, width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True)
-        self.field_strength_select = Select(title=self.lexicon["field_strength"], value="1.5", options=["1.5", "3.0"], width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), disabled=True) # -10 -> -15
-
-        calibration_cohorts = ['AIBL', 'ADNI2', 'ADNI3', 'DELCODE']  # Add actual available datasets
-        self.cohort_calibration_select = Select(
-            title=self.lexicon["cohort_calibration"], 
-            value=dataset_name,  # Use config default
-            options=calibration_cohorts,  # Use actual dataset names
-            width=int(np.floor(m.subj_bg.shape[1]*scale_factor)//2-15), 
+        spinner_width = int(np.floor(m.subj_bg.shape[1] * scale_factor) // 2 - 15)
+        self.age_spinner = Spinner(
+            title=self.lexicon["age"],
+            placeholder="years",
+            mode="int",
+            low=55,
+            high=99,
+            width=spinner_width-5,
             disabled=True
         )
+        self.sex_select = Select(
+            title=self.lexicon["sex"],
+            value="N/A",
+            options=self.lexicon["sex_catg"],
+            width=spinner_width,
+            disabled=True
+        )
+        self.tiv_spinner = Spinner(
+            title=self.lexicon["tiv"],
+            placeholder="cm³",
+            mode="float",
+            low=1000,
+            high=2100,
+            width=spinner_width,
+            disabled=True
+        )
+        self.field_strength_select = Select(
+            title=self.lexicon["field_strength"],
+            value="1.5",
+            options=["1.5", "3.0"],
+            width=spinner_width,
+            disabled=True
+        )
+
+        self.cohort_calibration_select = Select(
+            title=self.lexicon["cohort_calibration"],
+            value=self.lexicon["calibration_datasets"][dataset_name],
+            options=list(self.lexicon["calibration_datasets"].values()),
+            width=spinner_width+5,
+            disabled=False
+        )
+        self.cohort_map = {v: k for k, v in self.lexicon["calibration_datasets"].items()}
 
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
         # parent figure in Bokeh:
@@ -791,7 +820,7 @@ class View:
         self.pred_status_lbl = figure(
         	                      background_fill_alpha=0,
         	                      border_fill_alpha=0,
-                                  plot_width=450,
+                                  plot_width=800,
                                   plot_height=20,
                                   margin=(5,0,0,5),
                                   title='',
