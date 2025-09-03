@@ -633,7 +633,6 @@ class Model:
         self.set_model(selected_model)
 
         # load selected calibration model data from cache or disk:
-        self.datacohort = None
         self.set_calibration_model(selected_calibration_model)
 
         # Call once to initialize first image and variables
