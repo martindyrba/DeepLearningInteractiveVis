@@ -361,8 +361,10 @@ class Model:
         Returns:
         tuple: (calibrated_prediction, lower_CI, upper_CI) as floats
         """
-        if debug: print("Called get_calibrated_prediction().")
-        
+        if debug: 
+            print("Called get_calibrated_prediction().")
+            print("Calibration cohort:", dataset_name)
+
         # Extract calibration arrays for the dataset
         X_cal = self.calmodel[f'{dataset_name}_X_cal'].flatten()
         y_mean = self.calmodel[f'{dataset_name}_y_mean'].flatten()

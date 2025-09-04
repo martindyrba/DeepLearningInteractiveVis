@@ -11,21 +11,29 @@ from bokeh.models.callbacks import CustomJS
 import numpy as np
 import time
 
-def select_language_callback(attr, old_value, new_value):
+def select_language_callback(attr, old, new):
     """
-    Called if user has selected a new language.
+    Called when the user selects a new language.
+    Updates all UI elements to reflect the selected language.
     """
-    if debug: print("Called select_language_callback().")
-    # keep track of current sex
+    if debug:
+        print("Called select_language_callback().")
+    # Save current dropdown selections
     sex_index = v.lexicon["sex_catg"].index(v.sex_select.value)
-    v.lexicon = translations[new_value]
+    cohort_value = v.cohort_calibration_select.value
+    cohort_key = v.cohort_map.get(cohort_value)
+    # Update lexicon to new language
+    v.lexicon = translations[new]
+    # Rebuild cohort map for new language
+    v.cohort_map = {v: k for k, v in v.lexicon["calibration_datasets"].items()}
     v.curdoc().hold()
-    
+
+    # Update UI elements with new translations
     v.lang_title_div.update(text=v.lexicon["lang"])
     v.subject_select.update(title=v.lexicon["subject"])
     v.model_select.update(title=v.lexicon["model"])
     v.threshold_slider.update(title=v.lexicon["relv_th"])
-    v.clusthist.title.text=v.lexicon["clusthist_title"]
+    v.clusthist.title.text = v.lexicon["clusthist_title"]
     v.clustersize_slider.update(title=v.lexicon["min_cluster"])
     v.transparency_slider.update(title=v.lexicon["transparency"])
     v.toggle_transparency.update(label=v.lexicon["t_transparency"])
@@ -39,26 +47,32 @@ def select_language_callback(attr, old_value, new_value):
     v.sex_select.update(options=v.lexicon["sex_catg"], value=v.lexicon["sex_catg"][sex_index])
     v.tiv_spinner.update(title=v.lexicon["tiv"])
     v.field_strength_select.update(title=v.lexicon["field_strength"])
+    v.cohort_calibration_select.update(title=v.lexicon["cohort_calibration"], options=list(v.lexicon["calibration_datasets"].values()))
+    v.cohort_calibration_select.value=v.lexicon["calibration_datasets"].get(cohort_key)
     v.file_uploaded_lbl.update(text=v.lexicon["upload_status1"])
     v.prepare_button.update(label=v.lexicon["prepare_label"])
     v.slice_slider_frontal.update(title=v.lexicon["c_slice"])
-    v.guide_frontal.title.text=v.lexicon["relv_plot_title"]
+    v.guide_frontal.title.text = v.lexicon["relv_plot_title"]
     v.flip_frontal_view.update(label=v.lexicon["t_frontal_view"])
     v.processing_label.update(text=v.lexicon["processing_label"])
     v.scan_upload_label.update(text=v.lexicon["upload_label"])
     v.slice_slider_axial.update(title=v.lexicon["a_slice"])
-    v.guide_axial.title.text=v.lexicon["relv_plot_title"]
+    v.guide_axial.title.text = v.lexicon["relv_plot_title"]
     v.slice_slider_sagittal.update(title=v.lexicon["s_slice"])
-    v.guide_sagittal.title.text=v.lexicon["relv_plot_title"]
+    v.guide_sagittal.title.text = v.lexicon["relv_plot_title"]
     v.color_bar.update(title=v.lexicon["relv_scale_title"])
     v.p_color_bar.add_layout(v.color_bar)
-    if m.pred is None:
-        v.prediction_label.update(text = v.lexicon["scan_evaluate"])
-    elif int(m.pred) == 0 and not v.processing_done:
-        v.prediction_label.update(text = v.lexicon["enter_and_process"])
-    else:
-        v.prediction_label.update(text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci))
     v.color_mode.update(label=v.lexicon["theme_label"])
+
+    # Update prediction label based on current state
+    if m.pred is None:
+        v.prediction_label.update(text=v.lexicon["scan_evaluate"])
+    elif int(m.pred) == 0 and not v.processing_done:
+        v.prediction_label.update(text=v.lexicon["enter_and_process"])
+    else:
+        v.prediction_label.update(
+            text=v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci)
+        )
 
     v.curdoc().add_root(v.layout)
     v.curdoc().unhold()
@@ -176,13 +190,16 @@ def select_cohort_calibration_callback(attr, old, new):
     :return: None
     """
     if debug: print("Called select_cohort_calibration_callback().")
-    
     # Get new calibrated prediction
     if m.pred is not None:
-        m.calibrated_pred, m.lower_ci, m.upper_ci = m.get_calibrated_prediction(v.cohort_calibration_select.value, m.pred)
+        # Find just the key in chorts dict based on the value
+        cohort_key = v.cohort_map.get(new)
+        m.calibrated_pred, m.lower_ci, m.upper_ci = m.get_calibrated_prediction(cohort_key, m.pred)
         # Update the prediction label with the new likelihood
         v.prediction_label.text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci)
-    
+    else:
+        if debug: print("No likelihood to calibrate")
+        pass
 
 def select_subject_worker():
     """
@@ -506,7 +523,7 @@ def restrict_controls_for_uploaded_scan():
     v.model_select.update(disabled=True)
     v.subject_select.update(disabled=True)
     v.file_uploaded_lbl.update(visible=True) # redundant, no visible change
-    v.cohort_calibration_select.update(disabled=True)
+    # v.cohort_calibration_select.update(disabled=True)
     v.threshold_slider.update(disabled=True)
     v.clustersize_slider.update(disabled=True)
     v.transparency_slider.update(disabled=True)
