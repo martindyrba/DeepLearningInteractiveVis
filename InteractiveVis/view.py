@@ -448,7 +448,7 @@ class View:
         self.flip_frontal_view.update(disabled=True)
         self.lang_select.update(disabled=True)
         self.color_mode.update(disabled=True)
-        self.cohort_calibration_select.update(disabled=True)
+        self.calibration_select.update(disabled=True)
 
     def enable_widgets(self):
         """
@@ -470,7 +470,7 @@ class View:
         self.flip_frontal_view.update(disabled=False)
         self.lang_select.update(disabled=False)
         self.color_mode.update(disabled=False)
-        self.cohort_calibration_select.update(disabled=False)
+        self.calibration_select.update(disabled=False)
 
     def make_covariates_editable(self):
         """
@@ -749,14 +749,14 @@ class View:
             disabled=True
         )
 
-        self.cohort_calibration_select = Select(
-            title=self.lexicon["cohort_calibration"],
-            value=self.lexicon["calibration_datasets"][dataset_name],
-            options=list(self.lexicon["calibration_datasets"].values()),
+        self.calibration_select = Select(
+            title=self.lexicon["calibration"],
+            value=self.lexicon["calibration_options"][dataset_name],
+            options=list(self.lexicon["calibration_options"].values()),
             width=spinner_width+5,
             disabled=False
         )
-        self.cohort_map = {v: k for k, v in self.lexicon["calibration_datasets"].items()}
+        self.calibration_map = {v: k for k, v in self.lexicon["calibration_options"].items()}
 
         # Empty dummy figure to add ColorBar to, because annotations (like a ColorBar) must have a
         # parent figure in Bokeh:
@@ -844,7 +844,7 @@ class View:
             ),
             column(
                 row(self.scan_upload),
-                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.cohort_calibration_select,self.p_file_up_lbl, css_classes=["subject_divs"]),
+                row(self.age_spinner, self.sex_select, self.tiv_spinner, self.field_strength_select, self.calibration_select,self.p_file_up_lbl, css_classes=["subject_divs"]),
                 row(column(self.prepare_button),
                     column(Spacer(height=40, width=125, sizing_mode='scale_width')),
                     column(self.lang_title_div),

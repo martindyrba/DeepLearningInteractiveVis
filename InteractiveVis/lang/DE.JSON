@@ -34,6 +34,12 @@
     "relv_scale_title": "Relevanz",
     "t_frontal_view": "Tausche Links/Rechts in d. Darstellung",
     "theme_label": "Wechsle zu hellem/dunklem Modus",
-    "cohort_calibration": "Kalibrierungs-Kohorte:",
-    "calibration_datasets":{ "AIBL":"Australien | AIBL", "ADNI2": "USA-alt | ADNI2", "ADNI3": "USA-neu | ADNI3", "DELCODE": "Deutschland | DELCODE"}
+    "calibration": "Kalibrierung:",
+    "calibration_options": {
+    "Age(55_64)": "Alter (55-64)",
+    "Age(65_69)": "Alter (65-69)",
+    "Age(70_74)": "Alter (70-74)",
+    "Age(75_79)": "Alter (75-79)",
+    "Age(80_94)": "Alter (80-94)"
+    }
 }

@@ -20,12 +20,12 @@ def select_language_callback(attr, old, new):
         print("Called select_language_callback().")
     # Save current dropdown selections
     sex_index = v.lexicon["sex_catg"].index(v.sex_select.value)
-    cohort_value = v.cohort_calibration_select.value
-    cohort_key = v.cohort_map.get(cohort_value)
+    calibration_value = v.calibration_select.value
+    calibration_key = v.calibration_map.get(calibration_value)
     # Update lexicon to new language
     v.lexicon = translations[new]
-    # Rebuild cohort map for new language
-    v.cohort_map = {v: k for k, v in v.lexicon["calibration_datasets"].items()}
+    # Rebuild calibration map for new language
+    v.calibration_map = {v: k for k, v in v.lexicon["calibration_options"].items()}
     v.curdoc().hold()
 
     # Update UI elements with new translations
@@ -47,8 +47,8 @@ def select_language_callback(attr, old, new):
     v.sex_select.update(options=v.lexicon["sex_catg"], value=v.lexicon["sex_catg"][sex_index])
     v.tiv_spinner.update(title=v.lexicon["tiv"])
     v.field_strength_select.update(title=v.lexicon["field_strength"])
-    v.cohort_calibration_select.update(title=v.lexicon["cohort_calibration"], options=list(v.lexicon["calibration_datasets"].values()))
-    v.cohort_calibration_select.value=v.lexicon["calibration_datasets"].get(cohort_key)
+    v.calibration_select.update(title=v.lexicon["calibration"], options=list(v.lexicon["calibration_options"].values()))
+    v.calibration_select.value=v.lexicon["calibration_options"].get(calibration_key)
     v.file_uploaded_lbl.update(text=v.lexicon["upload_status1"])
     v.prepare_button.update(label=v.lexicon["prepare_label"])
     v.slice_slider_frontal.update(title=v.lexicon["c_slice"])
@@ -179,9 +179,9 @@ def click_sagittal_callback(event):
     v.slice_slider_axial.update(value=y)
     if not v.toggle_regions.active: v.plot_frontal()
 
-def select_cohort_calibration_callback(attr, old, new):
+def select_calibration_callback(attr, old, new):
     """
-    Called if user has selected a new cohort calibration dataset.
+    Called if user has selected a new calibration option.
 
     This will get new calibrated prediction and update the prediction label.
     :param attr: not used
@@ -189,12 +189,12 @@ def select_cohort_calibration_callback(attr, old, new):
     :param new: not used
     :return: None
     """
-    if debug: print("Called select_cohort_calibration_callback().")
+    if debug: print("Called select_calibration_callback().")
     # Get new calibrated prediction
     if m.pred is not None:
         # Find just the key in chorts dict based on the value
-        cohort_key = v.cohort_map.get(new)
-        m.calibrated_pred, m.lower_ci, m.upper_ci = m.get_calibrated_prediction(cohort_key, m.pred)
+        calibration_key = v.calibration_map.get(new)
+        m.calibrated_pred, m.lower_ci, m.upper_ci = m.get_calibrated_prediction(calibration_key, m.pred)
         # Update the prediction label with the new likelihood
         v.prediction_label.text = v.lexicon["calibrated_likelihood"] % (m.pred, m.calibrated_pred, m.lower_ci, m.upper_ci)
     else:
@@ -523,7 +523,7 @@ def restrict_controls_for_uploaded_scan():
     v.model_select.update(disabled=True)
     v.subject_select.update(disabled=True)
     v.file_uploaded_lbl.update(visible=True) # redundant, no visible change
-    # v.cohort_calibration_select.update(disabled=True)
+    # v.calibration_select.update(disabled=True)
     v.threshold_slider.update(disabled=True)
     v.clustersize_slider.update(disabled=True)
     v.transparency_slider.update(disabled=True)
@@ -694,7 +694,7 @@ v.subject_select.on_change('value', select_subject_callback)
 v.model_select.on_change('value', select_model_callback)
 v.prepare_button.on_click(enter_covariates_callback)
 v.scan_upload.on_change("value", upload_scan_callback)
-v.cohort_calibration_select.on_change("value", select_cohort_calibration_callback)
+v.calibration_select.on_change("value", select_calibration_callback)
 # callback for language
 v.lang_select.on_change("value", select_language_callback)
 
