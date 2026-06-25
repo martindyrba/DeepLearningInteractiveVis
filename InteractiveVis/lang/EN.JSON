@@ -34,6 +34,12 @@
     "relv_scale_title": "Relevance",
     "t_frontal_view": "Flip L/R orientation",
     "theme_label": "Switch to Dark/Light Mode",
-    "cohort_calibration": "Calibration Cohort:",
-    "calibration_datasets": { "AIBL":"Australia | AIBL", "ADNI2": "USA-old | ADNI2", "ADNI3": "USA-new | ADNI3", "DELCODE": "Germany | DELCODE"}
+    "calibration": "Calibration:",
+    "calibration_options": {
+    "Age(55_64)": "Age (55-64)",
+    "Age(65_69)": "Age (65-69)",
+    "Age(70_74)": "Age (70-74)",
+    "Age(75_79)": "Age (75-79)",
+    "Age(80_94)": "Age (80-94)"
+    }
 }

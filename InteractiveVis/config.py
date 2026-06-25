@@ -27,7 +27,7 @@ flip_left_right_in_frontal_plot = False
 
 calibration_models = sorted(glob.glob(os.path.join('model_reg_calibrations','*_models.npz'))) # get list of available calibrated regression models
 selected_calibration_model = os.path.join('model_reg_calibrations','iso_models.npz') # get istonic regression models
-dataset_name = 'AIBL'  # default calibration dataset at the application startup
+dataset_name = 'Age(75_79)'  # default calibration Age split at the application startup
 
 # define path/name to excel file and the sheet name containing covariates
 covariates_excel_file = 'results/hippocampus_volume_relevance_ADNI2.xlsx'
