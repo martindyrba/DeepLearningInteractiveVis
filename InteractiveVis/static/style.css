@@ -76,3 +76,21 @@ body.dark-mode {
 .dark-mode .noUi-connects {
   background-color: #808080;
 }
+
+.ai-modified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  background: #000;
+  color: #fff;
+  border-radius: 999px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  font-weight: 600;
+  line-height: 1;
+  width: 7em;
+  height: 20pt;
+  flex-shrink: 0;
+  border-radius: 5tp;
+}
